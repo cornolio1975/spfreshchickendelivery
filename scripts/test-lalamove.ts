@@ -1,4 +1,4 @@
-import { LalamoveClient } from "../lib/lalamove";
+import { LalamoveService } from "../lib/lalamove";
 import dotenv from "dotenv";
 
 // Load env vars from .env.local
@@ -10,7 +10,7 @@ async function test() {
     console.log("Secret:", process.env.LALAMOVE_API_SECRET ? "Found" : "Missing");
 
     try {
-        const quote = await LalamoveClient.getQuote("KLCC, Kuala Lumpur");
+        const quote = await LalamoveService.getQuotation("KLCC, Kuala Lumpur");
         console.log("Success! Quote:", quote);
     } catch (error: any) {
         console.error("Failed:", error.message);
