@@ -33,10 +33,19 @@ interface BusinessSettings {
     instagram_url?: string
 }
 
+interface Shop {
+    id: string
+    name: string
+    address: string
+    lat: string
+    lng: string
+    is_active: boolean
+}
+
 export default function AdminPage() {
     const { user, profile, loading: authLoading } = useAuth()
     const router = useRouter()
-    const [activeTab, setActiveTab] = useState<'products' | 'settings'>('products')
+    const [activeTab, setActiveTab] = useState<'products' | 'settings' | 'shops'>('products')
 
     // Products state
     const [products, setProducts] = useState<Product[]>([])
@@ -69,6 +78,18 @@ export default function AdminPage() {
         instagram_url: ''
     })
 
+    // Shops state
+    const [shops, setShops] = useState<Shop[]>([])
+    const [editingShop, setEditingShop] = useState<Shop | null>(null)
+    const [showShopForm, setShowShopForm] = useState(false)
+    const [shopForm, setShopForm] = useState({
+        name: '',
+        address: '',
+        lat: '',
+        lng: '',
+        is_active: true
+    })
+
     useEffect(() => {
         if (authLoading) return
         if (!user) {
@@ -83,6 +104,7 @@ export default function AdminPage() {
 
         fetchProducts()
         fetchBusinessSettings()
+        fetchShops()
     }, [user, profile, authLoading, router])
 
     const fetchProducts = async () => {
@@ -132,6 +154,70 @@ export default function AdminPage() {
             }
         } catch (error) {
             console.error('Error fetching business settings:', error)
+        }
+    }
+
+    const fetchShops = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('shops')
+                .select('*')
+                .order('name')
+
+            if (error) throw error
+            setShops(data || [])
+        } catch (error) {
+            console.error('Error fetching shops:', error)
+        }
+    }
+
+    const handleShopSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        try {
+            if (editingShop) {
+                const { error } = await supabase
+                    .from('shops')
+                    .update(shopForm)
+                    .eq('id', editingShop.id)
+
+                if (error) throw error
+            } else {
+                const { error } = await supabase
+                    .from('shops')
+                    .insert([shopForm])
+
+                if (error) throw error
+            }
+
+            setShowShopForm(false)
+            setEditingShop(null)
+            setShopForm({
+                name: '',
+                address: '',
+                lat: '',
+                lng: '',
+                is_active: true
+            })
+            fetchShops()
+        } catch (error: any) {
+            alert('Error: ' + error.message)
+        }
+    }
+
+    const handleDeleteShop = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this shop?')) return
+
+        try {
+            const { error } = await supabase
+                .from('shops')
+                .delete()
+                .eq('id', id)
+
+            if (error) throw error
+            fetchShops()
+        } catch (error: any) {
+            alert('Error: ' + error.message)
         }
     }
 
@@ -371,6 +457,16 @@ export default function AdminPage() {
                     >
                         <Settings className="inline-block mr-2 h-5 w-5" />
                         Business Settings
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('shops')}
+                        className={`px-6 py-3 font-bold rounded-t-xl transition-colors ${activeTab === 'shops'
+                            ? 'bg-white text-primary border-b-2 border-primary'
+                            : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                    >
+                        <Store className="inline-block mr-2 h-5 w-5" />
+                        Shops
                     </button>
                 </div>
 
@@ -662,6 +758,146 @@ export default function AdminPage() {
                                 </Button>
                             </div>
                         </form>
+                    </div>
+                )}
+
+                {/* Shops Tab */}
+                {activeTab === 'shops' && (
+                    <div>
+                        <div className="flex justify-end mb-6 gap-3">
+                            <Button onClick={() => {
+                                setShowShopForm(!showShopForm);
+                                setEditingShop(null);
+                                setShopForm({ name: '', address: '', lat: '', lng: '', is_active: true });
+                            }} className="rounded-full">
+                                <Plus className="mr-2 h-5 w-5" />
+                                Add Shop
+                            </Button>
+                        </div>
+
+                        {showShopForm && (
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-8">
+                                <h2 className="text-xl font-bold mb-4">{editingShop ? 'Edit Shop' : 'New Shop'}</h2>
+                                <form onSubmit={handleShopSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Shop Name</label>
+                                        <input
+                                            type="text"
+                                            value={shopForm.name}
+                                            onChange={(e) => setShopForm({ ...shopForm, name: e.target.value })}
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                            required
+                                            placeholder="e.g. SP_FCD_SHOP03 (Kota Kemuning)"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Full Address</label>
+                                        <textarea
+                                            value={shopForm.address}
+                                            onChange={(e) => setShopForm({ ...shopForm, address: e.target.value })}
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                            required
+                                            rows={2}
+                                            placeholder="Full address for Lalamove pickup"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Latitude</label>
+                                        <input
+                                            type="text"
+                                            value={shopForm.lat}
+                                            onChange={(e) => setShopForm({ ...shopForm, lat: e.target.value })}
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                            required
+                                            placeholder="e.g. 3.0286"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Longitude</label>
+                                        <input
+                                            type="text"
+                                            value={shopForm.lng}
+                                            onChange={(e) => setShopForm({ ...shopForm, lng: e.target.value })}
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                            required
+                                            placeholder="e.g. 101.4892"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2 flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={shopForm.is_active}
+                                            onChange={(e) => setShopForm({ ...shopForm, is_active: e.target.checked })}
+                                            className="mr-2 h-4 w-4"
+                                        />
+                                        <label className="text-sm font-bold text-slate-700">Active Shop (Available for Pickup)</label>
+                                    </div>
+                                    <div className="md:col-span-2 flex gap-4 mt-2">
+                                        <Button type="submit" className="rounded-full">
+                                            {editingShop ? 'Update' : 'Create'} Shop
+                                        </Button>
+                                        <Button type="button" variant="outline" onClick={() => { setShowShopForm(false); setEditingShop(null); }} className="rounded-full">
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {shops.map((shop) => (
+                                <div key={shop.id} className={`bg-white p-5 rounded-2xl shadow-sm border ${shop.is_active ? 'border-primary/20' : 'border-slate-100 bg-slate-50'}`}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Store className={`h-5 w-5 ${shop.is_active ? 'text-primary' : 'text-slate-400'}`} />
+                                            <h3 className={`font-bold ${shop.is_active ? 'text-slate-900' : 'text-slate-500'}`}>{shop.name}</h3>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => {
+                                                    setEditingShop(shop)
+                                                    setShopForm({
+                                                        name: shop.name,
+                                                        address: shop.address,
+                                                        lat: shop.lat,
+                                                        lng: shop.lng,
+                                                        is_active: shop.is_active
+                                                    })
+                                                    setShowShopForm(true)
+                                                }}
+                                                className="h-8 w-8 p-0"
+                                            >
+                                                <Edit className="h-4 w-4 text-slate-500" />
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handleDeleteShop(shop.id)}
+                                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm text-slate-600 mb-2 line-clamp-2">{shop.address}</p>
+                                    <div className="flex gap-4 text-xs text-slate-400 font-mono">
+                                        <span>Lat: {shop.lat}</span>
+                                        <span>Lng: {shop.lng}</span>
+                                    </div>
+                                    {!shop.is_active && (
+                                        <div className="mt-2 text-xs font-bold text-red-400 uppercase tracking-wider">Inactive</div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        {shops.length === 0 && !showShopForm && (
+                            <div className="text-center py-20">
+                                <Store className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+                                <p className="text-slate-500 text-lg">No shops configured yet.</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

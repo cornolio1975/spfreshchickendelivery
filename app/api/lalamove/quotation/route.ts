@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { LalamoveService } from '@/lib/lalamove';
+import { supabase } from '@/lib/supabase'; // Ensure this client is available on server
 
 export async function POST(request: Request) {
     try {
         console.log('[API Route] Starting quotation request...');
 
         const body = await request.json();
-        const { address } = body;
+        const { address, shopId } = body;
 
         console.log('[API Route] Address received:', address);
+        console.log('[API Route] Shop ID received:', shopId);
 
         if (!address) {
             return NextResponse.json(
@@ -17,8 +19,38 @@ export async function POST(request: Request) {
             );
         }
 
+        let pickupLocation = undefined;
+
+        if (shopId) {
+            // Fetch shop details
+            console.log(`[API Route] Fetching shop details for ID: ${shopId}`);
+            // Note: We need to use valid Supabase client for server-side if not using public API
+            // Assuming @/lib/supabase exports a client that works here (likely using Anon key)
+            // For server-side secure access, we might need a service role client, but Anon key should work for reading public table 'shops'
+            const { data: shop, error } = await supabase
+                .from('shops')
+                .select('*')
+                .eq('id', shopId)
+                .single();
+
+            if (error) {
+                console.error('[API Route] Error fetching shop:', error);
+                // Fallback or error? Let's error for now if shop ID was explicit
+                // return NextResponse.json({ message: 'Invalid shop selected' }, { status: 400 });
+                // Actually, let's log and proceed with default to avoid complete breakage if DB issue
+                console.warn('[API Route] Using default shop location due to fetch error.');
+            } else if (shop) {
+                pickupLocation = {
+                    lat: shop.lat,
+                    lng: shop.lng,
+                    address: shop.address
+                };
+                console.log('[API Route] Using shop location:', pickupLocation);
+            }
+        }
+
         console.log('[API Route] Calling LalamoveService.getQuotation...');
-        const quotation = await LalamoveService.getQuotation(address);
+        const quotation = await LalamoveService.getQuotation(address, pickupLocation);
 
         console.log('[API Route] Quotation received successfully');
         return NextResponse.json(quotation);

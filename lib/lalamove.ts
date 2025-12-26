@@ -7,7 +7,8 @@ const MARKET = 'MY_KUL';
 
 // Temporary Pickup Location for Sandbox Testing (KLCC - covered by sandbox)
 // TODO: Change back to actual shop location when using production keys
-const SHOP_LOCATION = {
+// Default Pickup Location (Fallback)
+export const SHOP_LOCATION = {
     lat: "3.1578",
     lng: "101.7118",
     address: "KLCC, Kuala Lumpur City Centre, 50088 Kuala Lumpur"
@@ -51,7 +52,7 @@ export class LalamoveService {
         }
     }
 
-    static async getQuotation(deliveryAddress: string) {
+    static async getQuotation(deliveryAddress: string, pickupLocation = SHOP_LOCATION) {
         try {
             console.log('[Lalamove] Getting quotation for:', deliveryAddress);
 
@@ -72,10 +73,10 @@ export class LalamoveService {
                     stops: [
                         {
                             coordinates: {
-                                lat: String(SHOP_LOCATION.lat),
-                                lng: String(SHOP_LOCATION.lng)
+                                lat: String(pickupLocation.lat),
+                                lng: String(pickupLocation.lng)
                             },
-                            address: SHOP_LOCATION.address
+                            address: pickupLocation.address
                         },
                         {
                             coordinates: {

@@ -2,9 +2,17 @@
 
 import { useCart } from "@/context/CartContext"
 import { Button } from "@/components/ui/button"
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, MapPin } from "lucide-react"
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, MapPin, Store } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import { supabase } from "@/lib/supabase"
+
+interface Shop {
+    id: string
+    name: string
+    address: string
+    is_active: boolean
+}
 
 export default function CartPage() {
     const { items, removeItem, updateQuantity, total } = useCart()
@@ -12,6 +20,31 @@ export default function CartPage() {
     const [deliveryFee, setDeliveryFee] = useState<number | null>(null)
     const [isLoadingQuote, setIsLoadingQuote] = useState(false)
     const [quoteError, setQuoteError] = useState("")
+
+    // Multi-shop state
+    const [shops, setShops] = useState<Shop[]>([])
+    const [selectedShopId, setSelectedShopId] = useState<string>("")
+
+    useEffect(() => {
+        fetchShops()
+    }, [])
+
+    const fetchShops = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('shops')
+                .select('*')
+                .eq('is_active', true)
+                .order('name')
+
+            if (data && data.length > 0) {
+                setShops(data)
+                setSelectedShopId(data[0].id) // Default to first shop
+            }
+        } catch (err) {
+            console.error('Error fetching shops:', err)
+        }
+    }
 
     // Reset delivery fee if address changes significantly (optional, but good for UX)
     // For now, we keep it simple. User must click "Get Price" again.
@@ -30,7 +63,8 @@ export default function CartPage() {
             const res = await fetch('/api/lalamove/quotation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ address })
+                // Send selected shop ID
+                body: JSON.stringify({ address, shopId: selectedShopId })
             })
 
             const response = await res.json()
@@ -63,8 +97,13 @@ export default function CartPage() {
             return
         }
 
+        const shop = shops.find(s => s.id === selectedShopId)
+        const shopName = shop ? shop.name : "Default Shop"
+
         // Construct WhatsApp message
-        let message = "*New Order from Website*\n\n"
+        let message = "*New Order from Website*\n"
+        message += `*Shop:* ${shopName}\n\n`
+
         items.forEach((item, index) => {
             message += `${index + 1}. ${item.name}`
             if (item.option) message += ` (${item.option})`
@@ -149,32 +188,67 @@ export default function CartPage() {
                             </div>
                         ))}
 
-                        {/* Delivery Address Section */}
+                        {/* Delivery Details Section */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mt-6">
                             <h3 className="font-bold text-slate-900 mb-4 flex items-center">
-                                <MapPin className="h-5 w-5 mr-2 text-primary" />
+                                <Truck className="h-5 w-5 mr-2 text-primary" />
                                 Delivery Details
                             </h3>
-                            <div className="space-y-4">
-                                <textarea
-                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[100px]"
-                                    placeholder="Enter your full delivery address..."
-                                    value={address}
-                                    onChange={(e) => setAddress(e.target.value)}
-                                />
-                                <div className="flex justify-end">
-                                    <Button
-                                        variant="outline"
-                                        onClick={getDeliveryQuote}
-                                        disabled={isLoadingQuote || !address.trim()}
-                                        className="rounded-full"
-                                    >
-                                        {isLoadingQuote ? "Calculating..." : "Get Delivery Price"}
-                                    </Button>
-                                </div>
-                                {quoteError && (
-                                    <p className="text-red-500 text-sm font-medium text-right">{quoteError}</p>
+
+                            <div className="space-y-6">
+                                {/* Shop Selection */}
+                                {shops.length > 0 && (
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
+                                            <Store className="h-4 w-4 mr-2" />
+                                            Choose Pickup Shop
+                                        </label>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {shops.map((shop) => (
+                                                <div
+                                                    key={shop.id}
+                                                    onClick={() => {
+                                                        setSelectedShopId(shop.id)
+                                                        setDeliveryFee(null) // Reset fee on shop change
+                                                    }}
+                                                    className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${selectedShopId === shop.id
+                                                            ? 'border-primary bg-primary/5'
+                                                            : 'border-slate-100 hover:border-slate-200 bg-slate-50'
+                                                        }`}
+                                                >
+                                                    <div className="font-bold text-sm text-slate-900">{shop.name}</div>
+                                                    <div className="text-xs text-slate-500 line-clamp-1">{shop.address}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 )}
+
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
+                                        <MapPin className="h-4 w-4 mr-2" />
+                                        Your Delivery Address
+                                    </label>
+                                    <textarea
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px]"
+                                        placeholder="Enter your full delivery address..."
+                                        value={address}
+                                        onChange={(e) => setAddress(e.target.value)}
+                                    />
+                                    <div className="flex justify-end mt-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={getDeliveryQuote}
+                                            disabled={isLoadingQuote || !address.trim()}
+                                            className="rounded-full text-sm"
+                                        >
+                                            {isLoadingQuote ? "Calculating..." : "Get Delivery Price"}
+                                        </Button>
+                                    </div>
+                                    {quoteError && (
+                                        <p className="text-red-500 text-sm font-medium text-right mt-1">{quoteError}</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -197,6 +271,12 @@ export default function CartPage() {
                                         <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded font-medium">Enter address</span>
                                     )}
                                 </div>
+                                {selectedShopId && shops.find(s => s.id === selectedShopId) && (
+                                    <div className="flex justify-between text-slate-500 text-xs">
+                                        <span>From:</span>
+                                        <span className="max-w-[150px] text-right truncate">{shops.find(s => s.id === selectedShopId)?.name}</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="border-t pt-4 mb-8">
