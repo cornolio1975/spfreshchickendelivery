@@ -24,4 +24,4 @@ create policy "Enable write access for authenticated users only" on public.shops
 insert into public.shops (name, address, lat, lng)
 values 
     ('SP_FCD_SHOP01 (Kampung Jawa BT4)', 'Kampung Jawa BT4, Klang', '3.0286', '101.4892'), -- Approx lat/lng for Kg Jawa
-    ('SP_FCD_SHOP02 (Jalan Jitu Sri Muda)', 'Jalan Jitu, Taman Sri Muda, Shah Alam', '3.0333', '101.5333'); -- Approx lat/lng for Sri Muda
+    ('SP_FCD_SHOP02 (Jalan Jitu Sri Muda)', '2704 Jalan Jitu 25/125, Taman Sri Muda, 40400 Shah Alam, Selangor', '3.0333', '101.5333'); -- Approx lat/lng for Sri Muda
