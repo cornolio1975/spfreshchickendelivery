@@ -2,7 +2,7 @@
 
 import { useCart } from "@/context/CartContext"
 import { Button } from "@/components/ui/button"
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, MapPin, Store } from "lucide-react"
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, MapPin, Store, ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
@@ -15,11 +15,12 @@ interface Shop {
 }
 
 export default function CartPage() {
-    const { items, removeItem, updateQuantity, total } = useCart()
+    const { items, removeItem, updateQuantity, total, clearCart } = useCart()
     const [address, setAddress] = useState("")
     const [deliveryFee, setDeliveryFee] = useState<number | null>(null)
     const [isLoadingQuote, setIsLoadingQuote] = useState(false)
     const [quoteError, setQuoteError] = useState("")
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     // Multi-shop state
     const [shops, setShops] = useState<Shop[]>([])
@@ -70,20 +71,20 @@ export default function CartPage() {
             const response = await res.json()
 
             if (!res.ok) {
-                throw new Error(response.message || 'Failed to get quote')
+                setDeliveryFee(30.00) // Fallback default if API fails/quota exceeded
+                // throw new Error(response.message || 'Failed to get quote')
+            } else {
+                // Lalamove V3 structure: response.data.priceBreakdown.total
+                const priceBreakdown = response.data?.priceBreakdown || response.priceBreakdown
+                const price = parseFloat(priceBreakdown?.total || "0")
+                console.log('[Cart] Extracted price:', price)
+                setDeliveryFee(price)
             }
 
-            console.log('[Cart] Lalamove Response:', response)
-
-            // Lalamove V3 structure: response.data.priceBreakdown.total
-            const priceBreakdown = response.data?.priceBreakdown || response.priceBreakdown
-            const price = parseFloat(priceBreakdown?.total || "0")
-
-            console.log('[Cart] Extracted price:', price)
-            setDeliveryFee(price)
         } catch (err: any) {
             console.error('[Cart] Error:', err)
-            setQuoteError(err.message)
+            setDeliveryFee(30.00) // Fallback
+            // setQuoteError(err.message)
         } finally {
             setIsLoadingQuote(false)
         }
@@ -91,39 +92,89 @@ export default function CartPage() {
 
     const finalTotal = total + (deliveryFee || 0)
 
-    const handleCheckout = () => {
+    const handleCheckout = async () => {
         if (!address.trim()) {
             alert("Please enter a delivery address.")
             return
         }
 
-        const shop = shops.find(s => s.id === selectedShopId)
-        const shopName = shop ? shop.name : "Default Shop"
-
-        // Construct WhatsApp message
-        let message = "*New Order from Website*\n"
-        message += `*Shop:* ${shopName}\n\n`
-
-        items.forEach((item, index) => {
-            message += `${index + 1}. ${item.name}`
-            if (item.option) message += ` (${item.option})`
-            message += `\n   ${item.quantity} x RM${item.price.toFixed(2)} = RM${(item.quantity * item.price).toFixed(2)}\n`
-        })
-
-        message += `\n*Subtotal: RM ${total.toFixed(2)}*`
-
-        if (deliveryFee !== null) {
-            message += `\n*Delivery Fee: RM ${deliveryFee.toFixed(2)}*`
-            message += `\n*Address:* ${address}`
-        } else {
-            message += `\n*Delivery:* To be confirmed`
-            message += `\n*Address:* ${address}`
+        if (deliveryFee === null && address.trim()) {
+            // ensure delivery fee is calculated or set to default if user hasn't clicked button
+            await getDeliveryQuote()
         }
 
-        message += `\n\n*Total: RM ${finalTotal.toFixed(2)}*`
+        setIsSubmitting(true)
 
-        const url = `https://wa.me/60129092013?text=${encodeURIComponent(message)}`
-        window.open(url, '_blank')
+        try {
+            // 1. Get current user (if any)
+            const { data: { user } } = await supabase.auth.getUser()
+
+            // 2. Insert Order into Supabase
+            const { data: orderData, error: orderError } = await supabase
+                .from('orders')
+                .insert([
+                    {
+                        user_id: user?.id || null, // Null for guest
+                        status: 'pending',
+                        total: finalTotal,
+                        delivery_fee: deliveryFee || 0,
+                        delivery_address: address,
+                        // contact_number: // We don't have this in form yet, maybe request it? 
+                        // For now we rely on WhatsApp interaction for contact
+                        items: items,
+                        shop_id: selectedShopId || null,
+                        payment_method: 'cash', // Default
+                        payment_status: 'unpaid'
+                    }
+                ])
+                .select()
+                .single()
+
+            if (orderError) throw orderError
+
+            const orderNo = orderData.order_no
+            const orderId = orderData.id
+
+            // 3. Construct WhatsApp Message
+            const shop = shops.find(s => s.id === selectedShopId)
+            const shopName = shop ? shop.name : "Default Shop"
+
+            let message = `*New Order #${orderNo}*\n`
+            message += `*Shop:* ${shopName}\n\n`
+
+            items.forEach((item, index) => {
+                message += `${index + 1}. ${item.name}`
+                if (item.option) message += ` (${item.option})`
+                message += `\n   ${item.quantity} x RM${item.price.toFixed(2)} = RM${(item.quantity * item.price).toFixed(2)}\n`
+            })
+
+            message += `\n*Subtotal: RM ${total.toFixed(2)}*`
+
+            if (deliveryFee !== null) {
+                message += `\n*Delivery Fee: RM ${deliveryFee.toFixed(2)}*`
+            }
+            message += `\n*Address:* ${address}`
+
+            message += `\n\n*Total: RM ${finalTotal.toFixed(2)}*`
+            message += `\n\n_Order ID: ${orderId.split('-')[0]}..._`
+
+            // 4. Clear Cart and Redirect
+            clearCart()
+
+            const url = `https://wa.me/60129092013?text=${encodeURIComponent(message)}`
+            window.open(url, '_blank')
+
+            // Redirect to home or order confirmation page?
+            // router.push('/order-confirmation') 
+            // For now just stay here or reload to show empty state
+            window.location.href = '/'
+
+        } catch (error: any) {
+            console.error("Order creation failed:", error)
+            alert("Failed to create order. Please try again. " + error.message)
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     if (items.length === 0) {
@@ -146,7 +197,12 @@ export default function CartPage() {
     return (
         <div className="min-h-screen bg-slate-50 py-12">
             <div className="container mx-auto px-4">
-                <h1 className="text-3xl font-black text-slate-900 mb-8">Your Cart</h1>
+                <div className="flex items-center gap-4 mb-8">
+                    <Link href="/shop" className="p-2 hover:bg-white rounded-full transition-colors">
+                        <ChevronLeft className="h-6 w-6 text-slate-600" />
+                    </Link>
+                    <h1 className="text-3xl font-black text-slate-900">Your Cart</h1>
+                </div>
 
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Cart Items */}
@@ -212,8 +268,8 @@ export default function CartPage() {
                                                         setDeliveryFee(null) // Reset fee on shop change
                                                     }}
                                                     className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${selectedShopId === shop.id
-                                                            ? 'border-primary bg-primary/5'
-                                                            : 'border-slate-100 hover:border-slate-200 bg-slate-50'
+                                                        ? 'border-primary bg-primary/5'
+                                                        : 'border-slate-100 hover:border-slate-200 bg-slate-50'
                                                         }`}
                                                 >
                                                     <div className="font-bold text-sm text-slate-900">{shop.name}</div>
@@ -286,9 +342,22 @@ export default function CartPage() {
                                 </div>
                             </div>
 
-                            <Button size="lg" className="w-full rounded-full font-bold h-14 text-lg shadow-lg shadow-primary/20" onClick={handleCheckout}>
-                                Checkout via WhatsApp
-                                <ArrowRight className="ml-2 h-5 w-5" />
+                            <Button
+                                size="lg"
+                                className="w-full rounded-full font-bold h-14 text-lg shadow-lg shadow-primary/20"
+                                onClick={handleCheckout}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? "Processing..." : "Checkout via WhatsApp"}
+                                {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
+                            </Button>
+
+                            <Button
+                                variant="ghost"
+                                className="w-full rounded-full mt-4 font-bold text-slate-500"
+                                asChild
+                            >
+                                <Link href="/shop">Continue Shopping</Link>
                             </Button>
 
                             <p className="text-xs text-center text-slate-400 mt-4">
