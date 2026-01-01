@@ -31,7 +31,10 @@ create table public.orders (
   total decimal not null,
   delivery_fee decimal,
   delivery_address text not null,
-  contact_number text,
+  recipient_name text,
+  recipient_phone text,
+  room_floor_info text,
+  contact_number text, -- Deprecated in favor of recipient_phone
   items jsonb, -- Store items snapshot
   created_at timestamp with time zone default timezone('utc'::text, now())
 );

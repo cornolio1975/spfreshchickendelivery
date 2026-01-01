@@ -7,10 +7,8 @@ export async function POST(request: Request) {
         console.log('[API Route] Starting quotation request...');
 
         const body = await request.json();
-        const { address, shopId } = body;
-
-        console.log('[API Route] Address received:', address);
-        console.log('[API Route] Shop ID received:', shopId);
+        console.log('[API Route] Received body:', JSON.stringify(body, null, 2));
+        const { address, shopId, lat, lng, scheduleAt } = body;
 
         if (!address) {
             return NextResponse.json(
@@ -50,7 +48,7 @@ export async function POST(request: Request) {
         }
 
         console.log('[API Route] Calling LalamoveService.getQuotation...');
-        const quotation = await LalamoveService.getQuotation(address, pickupLocation);
+        const quotation = await LalamoveService.getQuotation(address, pickupLocation, { lat, lng, scheduleAt });
 
         console.log('[API Route] Quotation received successfully');
         return NextResponse.json(quotation);

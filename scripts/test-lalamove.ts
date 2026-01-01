@@ -10,7 +10,7 @@ async function test() {
     console.log("Secret:", process.env.LALAMOVE_API_SECRET ? "Found" : "Missing");
 
     try {
-        const quote = await LalamoveService.getQuotation("KLCC, Kuala Lumpur");
+        const quote = await LalamoveService.getQuotation("31, Jalan Sungai Kelubi 32/106a, Bukit Rimau, 40460 Shah Alam, Selangor, Malaysia");
         console.log("Success! Quote:", quote);
     } catch (error: any) {
         console.error("Failed:", error.message);

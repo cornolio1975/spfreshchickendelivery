@@ -1,41 +1,96 @@
 "use client"
 
 import { useCart } from "@/context/CartContext"
+import { useAuth } from "@/context/AuthContext"
 import { Button } from "@/components/ui/button"
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, MapPin, Store, ChevronLeft } from "lucide-react"
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, MapPin, Store, ChevronLeft, X } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 
+/*
+*/
 interface Shop {
     id: string
     name: string
     address: string
-    is_active: boolean
+    status: 'open' | 'closed' | 'hidden'
 }
 
 export default function CartPage() {
     const { items, removeItem, updateQuantity, total, clearCart } = useCart()
+    const { user, profile } = useAuth()
     const [address, setAddress] = useState("")
+    const [suggestions, setSuggestions] = useState<{ address: string, lat: string, lng: string }[]>([])
+    const [selectedCoords, setSelectedCoords] = useState<{ lat: string, lng: string } | null>(null)
+    const [showSuggestions, setShowSuggestions] = useState(false)
+    const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false)
     const [deliveryFee, setDeliveryFee] = useState<number | null>(null)
     const [isLoadingQuote, setIsLoadingQuote] = useState(false)
     const [quoteError, setQuoteError] = useState("")
+    const [isUsingDefaultFee, setIsUsingDefaultFee] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [defaultFee, setDefaultFee] = useState(15.00)
 
     // Multi-shop state
     const [shops, setShops] = useState<Shop[]>([])
     const [selectedShopId, setSelectedShopId] = useState<string>("")
 
+    // Scheduling state
+    const [deliveryType, setDeliveryType] = useState<'immediate' | 'scheduled'>('immediate')
+    const [scheduledDate, setScheduledDate] = useState<string>(new Date().toISOString().split('T')[0])
+    const [scheduledTime, setScheduledTime] = useState<string>("09:00")
+
+    // Delivery Details Modal State
+    const [showDetailsModal, setShowDetailsModal] = useState(false)
+    const [recipientName, setRecipientName] = useState("")
+    const [recipientPhone, setRecipientPhone] = useState("")
+    const [roomFloorInfo, setRoomFloorInfo] = useState("")
+
     useEffect(() => {
         fetchShops()
+        fetchDefaultFee()
     }, [])
+
+    // Suggestion debounce logic
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (address.length >= 3 && showSuggestions) {
+                setIsSearchingSuggestions(true)
+                try {
+                    const res = await fetch(`/api/lalamove/suggestions?q=${encodeURIComponent(address)}`)
+                    const data = await res.json()
+                    if (data.suggestions) {
+                        setSuggestions(data.suggestions)
+                    }
+                } catch (err) {
+                    console.error('Error fetching suggestions:', err)
+                } finally {
+                    setIsSearchingSuggestions(false)
+                }
+            } else {
+                setSuggestions([])
+            }
+        }, 500)
+
+        return () => clearTimeout(timer)
+    }, [address, showSuggestions])
+
+    const fetchDefaultFee = async () => {
+        try {
+            const { data } = await supabase.from('business_settings').select('default_delivery_fee').single()
+            if (data?.default_delivery_fee) setDefaultFee(Number(data.default_delivery_fee))
+        } catch (err) {
+            console.error('Error fetching default fee:', err)
+        }
+    }
 
     const fetchShops = async () => {
         try {
             const { data, error } = await supabase
                 .from('shops')
                 .select('*')
-                .eq('is_active', true)
+                .neq('status', 'hidden')
                 .order('name')
 
             if (data && data.length > 0) {
@@ -46,6 +101,14 @@ export default function CartPage() {
             console.error('Error fetching shops:', err)
         }
     }
+
+    // Effect to pre-fill recipient info when modal opens
+    useEffect(() => {
+        if (showDetailsModal && profile) {
+            if (!recipientName) setRecipientName(profile.full_name || "")
+            if (!recipientPhone) setRecipientPhone(profile.phone || "")
+        }
+    }, [showDetailsModal, profile])
 
     // Reset delivery fee if address changes significantly (optional, but good for UX)
     // For now, we keep it simple. User must click "Get Price" again.
@@ -61,33 +124,83 @@ export default function CartPage() {
         setDeliveryFee(null)
 
         try {
+            // Prepare scheduling data if applicable
+            let scheduleAt = undefined
+            if (deliveryType === 'scheduled') {
+                // Lalamove expects ISO string or similar. 
+                // We'll send the formatted UTC string.
+                scheduleAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString()
+            }
+
             const res = await fetch('/api/lalamove/quotation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // Send selected shop ID
-                body: JSON.stringify({ address, shopId: selectedShopId })
+                body: JSON.stringify({
+                    address,
+                    shopId: selectedShopId,
+                    lat: selectedCoords?.lat,
+                    lng: selectedCoords?.lng,
+                    scheduleAt
+                })
             })
 
             const response = await res.json()
+            setIsUsingDefaultFee(false) // Reset on new attempt
 
             if (!res.ok) {
-                setDeliveryFee(30.00) // Fallback default if API fails/quota exceeded
-                // throw new Error(response.message || 'Failed to get quote')
+                console.warn('[Cart] API failed:', response.message)
+                setDeliveryFee(defaultFee)
+                setIsUsingDefaultFee(true)
+                setQuoteError(`Unable to calculate exact delivery fee. Please proceed with checkout via WhatsApp; our admin will verify and update the exact fee before you proceed with payment.`)
             } else {
-                // Lalamove V3 structure: response.data.priceBreakdown.total
                 const priceBreakdown = response.data?.priceBreakdown || response.priceBreakdown
                 const price = parseFloat(priceBreakdown?.total || "0")
-                console.log('[Cart] Extracted price:', price)
+
+                console.log('[Cart] Quotation success:', price)
                 setDeliveryFee(price)
+                setQuoteError("") // Clear any previous errors
             }
 
         } catch (err: any) {
-            console.error('[Cart] Error:', err)
-            setDeliveryFee(30.00) // Fallback
-            // setQuoteError(err.message)
-        } finally {
+            console.error('[Cart] Network error details:', err)
+            setDeliveryFee(defaultFee)
+            setIsUsingDefaultFee(true)
+            setQuoteError(`Connection problem with delivery partner. Please proceed with checkout; our admin will manually verify your delivery fee.`)
+        }
+        finally {
             setIsLoadingQuote(false)
         }
+    }
+
+    const getAvailableDates = () => {
+        const dates = []
+        for (let i = 0; i < 5; i++) {
+            const date = new Date()
+            date.setDate(date.getDate() + i)
+            dates.push({
+                value: date.toISOString().split('T')[0],
+                label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : date.toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'short' })
+            })
+        }
+        return dates
+    }
+
+    const getAvailableTimes = () => {
+        const times = []
+        for (let hour = 8; hour <= 18; hour++) {
+            const h24_0 = hour.toString().padStart(2, '0')
+            const h24_30 = hour.toString().padStart(2, '0')
+
+            // Generate AM/PM labels
+            const period = hour >= 12 ? 'PM' : 'AM'
+            const h12 = hour > 12 ? hour - 12 : hour
+            const h12Str = h12.toString()
+
+            times.push({ value: `${h24_0}:00`, label: `${h12Str}:00 ${period}` })
+            times.push({ value: `${h24_30}:30`, label: `${h12Str}:30 ${period}` })
+        }
+        // Filter out times outside 8:30 AM - 6:00 PM
+        return times.filter(t => t.value >= "08:30" && t.value <= "18:00")
     }
 
     const finalTotal = total + (deliveryFee || 0)
@@ -99,32 +212,31 @@ export default function CartPage() {
         }
 
         if (deliveryFee === null && address.trim()) {
-            // ensure delivery fee is calculated or set to default if user hasn't clicked button
             await getDeliveryQuote()
         }
 
         setIsSubmitting(true)
 
         try {
-            // 1. Get current user (if any)
-            const { data: { user } } = await supabase.auth.getUser()
-
             // 2. Insert Order into Supabase
             const { data: orderData, error: orderError } = await supabase
                 .from('orders')
                 .insert([
                     {
-                        user_id: user?.id || null, // Null for guest
+                        user_id: user?.id || null,
                         status: 'pending',
                         total: finalTotal,
                         delivery_fee: deliveryFee || 0,
                         delivery_address: address,
-                        // contact_number: // We don't have this in form yet, maybe request it? 
-                        // For now we rely on WhatsApp interaction for contact
+                        recipient_name: recipientName,
+                        recipient_phone: recipientPhone,
+                        room_floor_info: roomFloorInfo,
                         items: items,
                         shop_id: selectedShopId || null,
-                        payment_method: 'cash', // Default
-                        payment_status: 'unpaid'
+                        payment_method: 'cash',
+                        payment_status: 'unpaid',
+                        delivery_type: deliveryType,
+                        scheduled_at: deliveryType === 'scheduled' ? `${scheduledDate}T${scheduledTime}:00Z` : null
                     }
                 ])
                 .select()
@@ -140,7 +252,16 @@ export default function CartPage() {
             const shopName = shop ? shop.name : "Default Shop"
 
             let message = `*New Order #${orderNo}*\n`
+            if (deliveryType === 'scheduled') {
+                message += `*SCHEDULED:* ${scheduledDate} @ ${scheduledTime}\n`
+            }
             message += `*Shop:* ${shopName}\n\n`
+
+            message += `*Delivery To:*\n`
+            message += `${recipientName} (${recipientPhone})\n`
+            message += `${address}\n`
+            if (roomFloorInfo) message += `*Unit/Floor:* ${roomFloorInfo}\n`
+            message += `\n`
 
             items.forEach((item, index) => {
                 message += `${index + 1}. ${item.name}`
@@ -153,9 +274,13 @@ export default function CartPage() {
             if (deliveryFee !== null) {
                 message += `\n*Delivery Fee: RM ${deliveryFee.toFixed(2)}*`
             }
-            message += `\n*Address:* ${address}`
 
             message += `\n\n*Total: RM ${finalTotal.toFixed(2)}*`
+
+            if (isUsingDefaultFee) {
+                message += `\n\n*Note:* Delivery fee is pending admin manual verification.`
+            }
+
             message += `\n\n_Order ID: ${orderId.split('-')[0]}..._`
 
             // 4. Clear Cart and Redirect
@@ -164,14 +289,12 @@ export default function CartPage() {
             const url = `https://wa.me/60129092013?text=${encodeURIComponent(message)}`
             window.open(url, '_blank')
 
-            // Redirect to home or order confirmation page?
-            // router.push('/order-confirmation') 
-            // For now just stay here or reload to show empty state
             window.location.href = '/'
 
         } catch (error: any) {
-            console.error("Order creation failed:", error)
-            alert("Failed to create order. Please try again. " + error.message)
+            console.error("[Checkout] Full error details:", JSON.stringify(error, null, 2))
+            const errorMsg = error.message || error.details || JSON.stringify(error)
+            alert("Failed to create order. " + errorMsg)
         } finally {
             setIsSubmitting(false)
         }
@@ -270,9 +393,14 @@ export default function CartPage() {
                                                     className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${selectedShopId === shop.id
                                                         ? 'border-primary bg-primary/5'
                                                         : 'border-slate-100 hover:border-slate-200 bg-slate-50'
-                                                        }`}
+                                                        } ${shop.status === 'closed' ? 'opacity-60 grayscale' : ''}`}
                                                 >
-                                                    <div className="font-bold text-sm text-slate-900">{shop.name}</div>
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="font-bold text-sm text-slate-900">{shop.name}</div>
+                                                        {shop.status === 'closed' && (
+                                                            <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">CLOSED</span>
+                                                        )}
+                                                    </div>
                                                     <div className="text-xs text-slate-500 line-clamp-1">{shop.address}</div>
                                                 </div>
                                             ))}
@@ -280,17 +408,111 @@ export default function CartPage() {
                                     </div>
                                 )}
 
+                                {/* Order Scheduling */}
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <label className="block text-sm font-bold text-slate-700 mb-3">Delivery Timing</label>
+                                    <div className="flex gap-2 mb-4">
+                                        <button
+                                            onClick={() => setDeliveryType('immediate')}
+                                            className={`flex-1 py-2 px-4 rounded-xl text-sm font-bold transition-all ${deliveryType === 'immediate'
+                                                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                                                : 'bg-white text-slate-500 border border-slate-200'
+                                                }`}
+                                        >
+                                            Order Now
+                                        </button>
+                                        <button
+                                            onClick={() => setDeliveryType('scheduled')}
+                                            className={`flex-1 py-2 px-4 rounded-xl text-sm font-bold transition-all ${deliveryType === 'scheduled'
+                                                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                                                : 'bg-white text-slate-500 border border-slate-200'
+                                                }`}
+                                        >
+                                            Schedule Future
+                                        </button>
+                                    </div>
+
+                                    {deliveryType === 'scheduled' && (
+                                        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div>
+                                                <label className="block text-[10px] uppercase font-black text-slate-400 mb-1 ml-1">Choose Date</label>
+                                                <select
+                                                    value={scheduledDate}
+                                                    onChange={(e) => setScheduledDate(e.target.value)}
+                                                    className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                >
+                                                    {getAvailableDates().map(d => (
+                                                        <option key={d.value} value={d.value}>{d.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] uppercase font-black text-slate-400 mb-1 ml-1">Choose Time</label>
+                                                <select
+                                                    value={scheduledTime}
+                                                    onChange={(e) => setScheduledTime(e.target.value)}
+                                                    className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                >
+                                                    {getAvailableTimes().map(t => (
+                                                        <option key={t.value} value={t.value}>{t.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <p className="col-span-2 text-[10px] text-slate-500 mt-1 italic">
+                                                * Deliveries available from 8:30 AM to 6:00 PM.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
                                         <MapPin className="h-4 w-4 mr-2" />
                                         Your Delivery Address
                                     </label>
-                                    <textarea
-                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px]"
-                                        placeholder="Enter your full delivery address..."
-                                        value={address}
-                                        onChange={(e) => setAddress(e.target.value)}
-                                    />
+                                    <div className="relative">
+                                        <textarea
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px]"
+                                            placeholder="Enter your full delivery address..."
+                                            value={address}
+                                            onChange={(e) => {
+                                                setAddress(e.target.value)
+                                                setSelectedCoords(null) // Clear coordinates if user types manually
+                                                setShowSuggestions(true)
+                                            }}
+                                            onFocus={() => setShowSuggestions(true)}
+                                            onBlur={() => {
+                                                // Small delay to allow clicking a suggestion
+                                                setTimeout(() => setShowSuggestions(false), 200)
+                                            }}
+                                        />
+
+                                        {showSuggestions && (suggestions.length > 0 || isSearchingSuggestions) && (
+                                            <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+                                                {isSearchingSuggestions && suggestions.length === 0 && (
+                                                    <div className="p-3 text-sm text-slate-500 flex items-center gap-2">
+                                                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                                        Searching for addresses...
+                                                    </div>
+                                                )}
+                                                {suggestions.map((suggestion, index) => (
+                                                    <button
+                                                        key={index}
+                                                        className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
+                                                        onClick={() => {
+                                                            setAddress(suggestion.address)
+                                                            setSelectedCoords({ lat: suggestion.lat, lng: suggestion.lng })
+                                                            setSuggestions([])
+                                                            setShowSuggestions(false)
+                                                            setShowDetailsModal(true) // Trigger modal
+                                                        }}
+                                                    >
+                                                        {suggestion.address}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="flex justify-end mt-2">
                                         <Button
                                             variant="outline"
@@ -301,8 +523,14 @@ export default function CartPage() {
                                             {isLoadingQuote ? "Calculating..." : "Get Delivery Price"}
                                         </Button>
                                     </div>
-                                    {quoteError && (
-                                        <p className="text-red-500 text-sm font-medium text-right mt-1">{quoteError}</p>
+                                    {quoteError ? (
+                                        <p className="text-amber-600 text-xs font-medium text-right mt-1 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                                            {quoteError}
+                                        </p>
+                                    ) : deliveryFee !== null && (
+                                        <p className="text-green-600 text-xs font-medium text-right mt-1">
+                                            Delivery price updated!
+                                        </p>
                                     )}
                                 </div>
                             </div>
@@ -367,6 +595,90 @@ export default function CartPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Delivery Details Modal */}
+            {showDetailsModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+                        <div className="p-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-2xl font-black text-slate-900 leading-tight">Delivery Details</h3>
+                                <button
+                                    onClick={() => setShowDetailsModal(false)}
+                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                                >
+                                    <X className="h-6 w-6 text-slate-400" />
+                                </button>
+                            </div>
+
+                            <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div className="flex items-start gap-3">
+                                    <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                                    <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">{address}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">Recipient Name</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Full name"
+                                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                        value={recipientName}
+                                        onChange={(e) => setRecipientName(e.target.value)}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">Phone Number</label>
+                                    <input
+                                        type="tel"
+                                        placeholder="e.g. 0123456789"
+                                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                        value={recipientPhone}
+                                        onChange={(e) => setRecipientPhone(e.target.value)}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">Unit / Floor / Block (Optional)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Block A, Level 5, Room 12"
+                                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                        value={roomFloorInfo}
+                                        onChange={(e) => setRoomFloorInfo(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-8 flex flex-col gap-3">
+                                <Button
+                                    className="w-full h-14 rounded-2xl font-black text-lg shadow-lg shadow-primary/20"
+                                    onClick={() => {
+                                        if (!recipientName || !recipientPhone) {
+                                            alert("Please fill in the recipient's name and phone number.")
+                                            return
+                                        }
+                                        setShowDetailsModal(false)
+                                        // Trigger price quote after saving details
+                                        getDeliveryQuote()
+                                    }}
+                                >
+                                    Confirm & Continue
+                                </Button>
+                                <button
+                                    className="w-full py-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                                    onClick={() => setShowDetailsModal(false)}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

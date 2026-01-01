@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import Image from "next/image"
@@ -5,38 +8,39 @@ import { ArrowRight, CheckCircle, Truck, Clock, ShieldCheck } from "lucide-react
 import { supabase } from "@/lib/supabase"
 import { products } from "@/data/products"
 import { ProductCard } from "@/components/shop/ProductCard"
+import { useState } from "react"
 
-export const revalidate = 0
+export default function Home() {
+  const [settings, setSettings] = useState<any>(null)
+  const [dbProducts, setDbProducts] = useState<any[]>([])
+  const [showResetNotice, setShowResetNotice] = useState(false)
 
-export default async function Home() {
-  let settings = null
-  try {
-    const { data } = await supabase
-      .from('business_settings')
-      .select('*')
-      .maybeSingle()
-    settings = data
-  } catch (error) {
-    console.error('Failed to fetch business settings:', error)
-  }
-
-  // Fetch products from DB
-  let dbProducts = []
-  try {
-    const { data: fetchedProducts } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: true })
-
-    if (fetchedProducts && fetchedProducts.length > 0) {
-      dbProducts = fetchedProducts
-    } else {
-      dbProducts = products
+  useEffect(() => {
+    // 1. FAILSAFE REDIRECT: Check for recovery token on the homepage
+    if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+      console.log('Failsafe redirect triggered from Home page')
+      setShowResetNotice(true)
+      window.location.href = '/reset-password' + window.location.hash
     }
-  } catch (error) {
-    console.error('Error fetching products:', error)
-    dbProducts = products
-  }
+
+    // Fetch settings and products client-side since we converted to use client
+    const fetchData = async () => {
+      try {
+        const { data } = await supabase.from('business_settings').select('*').maybeSingle()
+        setSettings(data)
+
+        const { data: fetchedProducts } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: true })
+        setDbProducts(fetchedProducts || products)
+      } catch (err) {
+        console.error(err)
+        setDbProducts(products)
+      }
+    }
+    fetchData()
+  }, [])
 
 
   const description = settings?.description || "Serving restaurants, markets, and households across Klang Valley with fresh, halal-certified chicken delivered daily."
@@ -44,6 +48,18 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Recovery Notice Failsafe */}
+      {showResetNotice && (
+        <div className="bg-yellow-400 p-4 text-center">
+          <p className="font-black text-blue-900 mb-2">Password Reset Token Detected!</p>
+          <Button variant="secondary" className="bg-white text-blue-900 font-bold" asChild>
+            <Link href={`/reset-password${typeof window !== 'undefined' ? window.location.hash : ''}`}>
+              Click here to go to Reset Page
+            </Link>
+          </Button>
+        </div>
+      )}
+
       {/* Hero Section with Images */}
       <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 py-16 md:py-24 overflow-hidden">
         {/* Background Pattern */}

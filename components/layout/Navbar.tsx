@@ -40,6 +40,9 @@ export function Navbar() {
                     <Link href="/" className="hover:text-primary transition-colors py-2 border-b-2 border-transparent hover:border-primary">Home</Link>
                     <Link href="/shop" className="hover:text-primary transition-colors py-2 border-b-2 border-transparent hover:border-primary">Shop</Link>
                     <Link href="/wholesale" className="hover:text-primary transition-colors py-2 border-b-2 border-transparent hover:border-primary">Wholesale</Link>
+                    {user && (
+                        <Link href="/orders" className="hover:text-primary transition-colors py-2 border-b-2 border-transparent hover:border-primary text-primary/80">My Orders</Link>
+                    )}
                     <Link href="/contact" className="hover:text-primary transition-colors py-2 border-b-2 border-transparent hover:border-primary">Contact</Link>
                     {profile?.role === 'admin' && (
                         <Link href="/admin" className="hover:text-primary transition-colors text-accent py-2 border-b-2 border-transparent hover:border-accent">Admin</Link>
@@ -93,6 +96,9 @@ export function Navbar() {
                     <Link href="/" className="block text-sm font-bold text-gray-700 hover:text-primary" onClick={() => setIsMenuOpen(false)}>Home</Link>
                     <Link href="/shop" className="block text-sm font-bold text-gray-700 hover:text-primary" onClick={() => setIsMenuOpen(false)}>Shop</Link>
                     <Link href="/wholesale" className="block text-sm font-bold text-gray-700 hover:text-primary" onClick={() => setIsMenuOpen(false)}>Wholesale</Link>
+                    {user && (
+                        <Link href="/orders" className="block text-sm font-bold text-primary hover:text-accent" onClick={() => setIsMenuOpen(false)}>My Orders</Link>
+                    )}
                     <Link href="/contact" className="block text-sm font-bold text-gray-700 hover:text-primary" onClick={() => setIsMenuOpen(false)}>Contact</Link>
                     {profile?.role === 'admin' && (
                         <Link href="/admin" className="block text-sm font-bold text-accent hover:text-primary" onClick={() => setIsMenuOpen(false)}>Admin</Link>

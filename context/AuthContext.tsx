@@ -11,6 +11,8 @@ interface AuthContextType {
     signIn: (email: string, password: string) => Promise<void>
     signUp: (email: string, password: string, fullName: string, phone: string) => Promise<void>
     signOut: () => Promise<void>
+    forgotPassword: (email: string) => Promise<void>
+    updatePassword: (password: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -21,9 +23,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
+        // 1. IMPROVED REDIRECT: Catch password recovery immediately
+        // Redirecting before getSession/onAuthStateChange ensures we don't lose the token
+        if (typeof window !== 'undefined' &&
+            window.location.hash.includes('type=recovery') &&
+            window.location.pathname !== '/reset-password') {
+            console.log('Recovery token detected, forcing redirect to /reset-password')
+            window.location.replace('/reset-password' + window.location.hash)
+            return
+        }
+
         // Check active session
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+            if (error) {
+                console.error('Session check error:', error)
+                // Force clear local storage if token is invalid
+                if (error.message?.includes('Refresh Token Not Found') || error.message?.includes('Invalid Refresh Token')) {
+                    console.warn('Corrupt session detected, clearing data...')
+                    localStorage.removeItem('supabase.auth.token') // Manual clear just in case
+                    supabase.auth.signOut()
+                }
+                setUser(null)
+                setLoading(false)
+                return
+            }
             setUser(session?.user ?? null)
+
             if (session?.user) {
                 fetchProfile(session.user.id)
             } else {
@@ -32,7 +57,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log('Auth event:', event)
+
+            if (event === 'PASSWORD_RECOVERY') {
+                if (window.location.pathname !== '/reset-password') {
+                    window.location.assign('/reset-password' + window.location.hash)
+                }
+                return
+            }
+
             setUser(session?.user ?? null)
             if (session?.user) {
                 fetchProfile(session.user.id)
@@ -46,6 +80,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [])
 
     const fetchProfile = async (userId: string) => {
+        if (!userId) {
+            setLoading(false)
+            return
+        }
+
         try {
             const { data, error } = await supabase
                 .from('profiles')
@@ -53,10 +92,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .eq('id', userId)
                 .single()
 
-            if (error) throw error
+            if (error) {
+                // PGRST116 means "no rows found" - this is expected for new users
+                // before the database trigger completes or if it fails.
+                if (error.code === 'PGRST116') {
+                    console.log('No profile found for user:', userId)
+                    setProfile(null)
+                    return
+                }
+                throw error
+            }
             setProfile(data)
-        } catch (error) {
-            console.error('Error fetching profile:', error)
+        } catch (error: any) {
+            console.error('Error fetching profile:', error?.message || error)
+            setProfile(null)
         } finally {
             setLoading(false)
         }
@@ -111,8 +160,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error
     }
 
+    const forgotPassword = async (email: string) => {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+        })
+        if (error) throw error
+    }
+
+    const updatePassword = async (password: string) => {
+        const { error } = await supabase.auth.updateUser({ password })
+        if (error) throw error
+    }
+
     return (
-        <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
+        <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, forgotPassword, updatePassword }}>
             {children}
         </AuthContext.Provider>
     )
