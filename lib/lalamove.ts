@@ -125,7 +125,8 @@ export class LalamoveService {
                         categories: ["FOOD_AND_BEVERAGE"],
                         handlingInstructions: ["KEEP_UPRIGHT"]
                     },
-                    isRouteOptimized: false
+                    isRouteOptimized: false,
+                    language: "en_MY"
                 }
             };
 
