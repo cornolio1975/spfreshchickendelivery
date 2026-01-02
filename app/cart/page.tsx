@@ -58,7 +58,8 @@ export default function CartPage() {
             if (address.length >= 3 && showSuggestions) {
                 setIsSearchingSuggestions(true)
                 try {
-                    const res = await fetch(`/api/lalamove/suggestions?q=${encodeURIComponent(address)}`)
+                    // CHANGED: Use /api/delivery/suggestions instead of /api/lalamove/suggestions to avoid ad-blockers
+                    const res = await fetch(`/api/delivery/suggestions?q=${encodeURIComponent(address)}`)
                     const data = await res.json()
                     if (data.suggestions) {
                         setSuggestions(data.suggestions)
@@ -132,7 +133,8 @@ export default function CartPage() {
                 scheduleAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString()
             }
 
-            const res = await fetch('/api/lalamove/quotation', {
+            // CHANGED: Use /api/data/q instead of /api/delivery/quote to avoid ad-blockers (attempt 3)
+            const res = await fetch('/api/data/q', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -568,6 +570,17 @@ export default function CartPage() {
                                     <span className="font-bold text-slate-900">Total</span>
                                     <span className="text-3xl font-black text-primary">RM {finalTotal.toFixed(2)}</span>
                                 </div>
+                            </div>
+
+                            <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 mb-6 flex gap-3 text-left">
+                                <div className="mt-0.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <p className="text-xs text-amber-800 font-medium leading-relaxed">
+                                    The delivery fee shown is an estimate. The exact fee will be confirmed by the admin via WhatsApp. Order will only be processed after you agree to the final payment.
+                                </p>
                             </div>
 
                             <Button
