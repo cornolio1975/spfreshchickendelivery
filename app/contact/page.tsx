@@ -77,12 +77,17 @@ export default async function ContactPage() {
                                     <div>
                                         <h3 className="font-bold text-slate-900 mb-1">Operating Hours</h3>
                                         <div className="text-slate-600 space-y-1">
-                                            {settings?.operating_hours && Object.entries(settings.operating_hours).map(([day, hours]) => (
-                                                <div key={day} className="flex justify-between">
-                                                    <span className="capitalize font-medium">{day}:</span>
-                                                    <span>{hours as string}</span>
-                                                </div>
-                                            ))}
+                                            {settings?.operating_hours && Object.entries(settings.operating_hours)
+                                                .sort(([dayA], [dayB]) => {
+                                                    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                                                    return days.indexOf(dayA.toLowerCase()) - days.indexOf(dayB.toLowerCase());
+                                                })
+                                                .map(([day, hours]) => (
+                                                    <div key={day} className="flex justify-between">
+                                                        <span className="capitalize font-medium">{day}:</span>
+                                                        <span>{hours as string}</span>
+                                                    </div>
+                                                ))}
                                         </div>
                                     </div>
                                 </div>
