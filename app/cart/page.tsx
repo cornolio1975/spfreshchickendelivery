@@ -170,9 +170,11 @@ export default function CartPage() {
 
         } catch (err: any) {
             console.error('[Cart] Network error details:', err)
+            // Log the URL we tried to hit for debugging
+            const attemptedUrl = `${apiUrl}/api/data/q`;
             setDeliveryFee(defaultFee)
             setIsUsingDefaultFee(true)
-            setQuoteError(`Network Error: ${err.message || "Connection failed"}`)
+            setQuoteError(`Network Error (${attemptedUrl}): ${err.message || "Connection failed"}`)
         }
         finally {
             setIsLoadingQuote(false)
