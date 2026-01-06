@@ -156,7 +156,9 @@ export default function CartPage() {
                 console.warn('[Cart] API failed:', response.message)
                 setDeliveryFee(defaultFee)
                 setIsUsingDefaultFee(true)
-                setQuoteError(`Unable to calculate exact delivery fee. Please proceed with checkout via WhatsApp; our admin will verify and update the exact fee before you proceed with payment.`)
+                // Show the actual error from backend if available
+                const backendError = response.error || response.message || "Unknown server error";
+                setQuoteError(`Delivery Quote Failed: ${backendError}`)
             } else {
                 const priceBreakdown = response.data?.priceBreakdown || response.priceBreakdown
                 const price = parseFloat(priceBreakdown?.total || "0")
@@ -170,7 +172,7 @@ export default function CartPage() {
             console.error('[Cart] Network error details:', err)
             setDeliveryFee(defaultFee)
             setIsUsingDefaultFee(true)
-            setQuoteError(`Connection problem with delivery partner. Please proceed with checkout; our admin will manually verify your delivery fee.`)
+            setQuoteError(`Network Error: ${err.message || "Connection failed"}`)
         }
         finally {
             setIsLoadingQuote(false)
