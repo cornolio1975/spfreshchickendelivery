@@ -58,8 +58,9 @@ export default function CartPage() {
             if (address.length >= 3 && showSuggestions) {
                 setIsSearchingSuggestions(true)
                 try {
-                    // CHANGED: Use /api/delivery/suggestions instead of /api/lalamove/suggestions to avoid ad-blockers
-                    const res = await fetch(`/api/delivery/suggestions?q=${encodeURIComponent(address)}`)
+                    // CHANGED: Use absolute URL for Android
+                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+                    const res = await fetch(`${apiUrl}/api/delivery/suggestions?q=${encodeURIComponent(address)}`)
                     const data = await res.json()
                     if (data.suggestions) {
                         setSuggestions(data.suggestions)
@@ -133,8 +134,9 @@ export default function CartPage() {
                 scheduleAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString()
             }
 
-            // CHANGED: Use /api/data/q instead of /api/delivery/quote to avoid ad-blockers (attempt 3)
-            const res = await fetch('/api/data/q', {
+            // CHANGED: Use absolute URL from env for Android compatibility
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+            const res = await fetch(`${apiUrl}/api/data/q`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

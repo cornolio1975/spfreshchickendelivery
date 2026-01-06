@@ -505,7 +505,7 @@ export default function AdminPage() {
                                                                 asChild
                                                                 className="h-8"
                                                             >
-                                                                <Link href={`/admin/orders/${order.id}/invoice`} target="_blank">
+                                                                <Link href={`/admin/orders/invoice?id=${order.id}`} target="_blank">
                                                                     <Printer className="h-4 w-4" />
                                                                 </Link>
                                                             </Button>

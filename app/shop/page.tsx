@@ -1,40 +1,48 @@
-import { products } from "@/data/products"
+"use client"
+
+import { useEffect, useState, Suspense } from 'react'
+import { products as staticProducts } from "@/data/products"
 import { supabase } from "@/lib/supabase"
 import { ProductCard } from "@/components/shop/ProductCard"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { useSearchParams } from "next/navigation"
 
-export default async function ShopPage({
-    searchParams,
-}: {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) {
-    const { cat } = await searchParams
-    const category = typeof cat === 'string' ? cat : 'all'
+function ShopContent() {
+    const searchParams = useSearchParams()
+    const category = searchParams.get('cat') || 'all'
+    const [products, setProducts] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
 
-    // Fetch from DB
-    let dbProducts = []
-    try {
-        const { data } = await supabase
-            .from('products')
-            .select('*')
-            .order('created_at', { ascending: true })
-        if (data && data.length > 0) {
-            dbProducts = data
-        } else {
-            dbProducts = products
+    useEffect(() => {
+        fetchProducts()
+    }, [])
+
+    const fetchProducts = async () => {
+        try {
+            const { data } = await supabase
+                .from('products')
+                .select('*')
+                .order('created_at', { ascending: true })
+
+            if (data && data.length > 0) {
+                setProducts(data)
+            } else {
+                setProducts(staticProducts)
+            }
+        } catch (e) {
+            setProducts(staticProducts)
+        } finally {
+            setLoading(false)
         }
-    } catch (e) {
-        dbProducts = products
     }
 
     const filteredProducts = category === 'all'
-        ? dbProducts
-        : dbProducts.filter((p: any) => p.category === category)
+        ? products
+        : products.filter((p: any) => p.category === category)
 
-    const categories = [
-        { id: 'all', name: 'All Products' },
-    ]
+    if (loading) {
+        return <div className="min-h-screen flex items-center justify-center">Loading Shop...</div>
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
@@ -64,5 +72,13 @@ export default async function ShopPage({
                 )}
             </div>
         </div>
+    )
+}
+
+export default function ShopPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading Shop...</div>}>
+            <ShopContent />
+        </Suspense>
     )
 }

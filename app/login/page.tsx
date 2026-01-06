@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogIn, UserPlus, Eye, EyeOff, Mail } from 'lucide-react'
+import { LogIn, UserPlus, Eye, EyeOff, Mail, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
     const [isSignUp, setIsSignUp] = useState(false)
@@ -240,6 +240,34 @@ export default function LoginPage() {
                     <Link href="/" className="text-sm text-slate-500 hover:text-slate-700">
                         ← Back to Home
                     </Link>
+                </div>
+
+                <div className="relative my-8">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-slate-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-white px-2 text-slate-500 font-bold tracking-wider">
+                            Or continue without account
+                        </span>
+                    </div>
+                </div>
+
+                <div className="text-center">
+                    <Button
+                        variant="outline"
+                        size="lg"
+                        className="w-full rounded-full font-bold border-2 hover:bg-slate-50 hover:text-primary transition-colors"
+                        asChild
+                    >
+                        <Link href="/shop">
+                            Continue as Guest
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
+                    <p className="text-xs text-slate-400 mt-3 px-4 leading-relaxed">
+                        You can still place orders without an email. We'll ask for your delivery details at checkout.
+                    </p>
                 </div>
             </div>
         </div>

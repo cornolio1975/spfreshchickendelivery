@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Printer } from 'lucide-react'
@@ -37,17 +37,18 @@ interface BusinessSettings {
     tagline?: string
 }
 
-export default function InvoicePage() {
-    const params = useParams()
+function InvoiceContent() {
+    const searchParams = useSearchParams()
+    const id = searchParams.get('id')
     const [order, setOrder] = useState<Order | null>(null)
     const [settings, setSettings] = useState<BusinessSettings | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        if (params.id) {
-            fetchData(params.id as string)
+        if (id) {
+            fetchData(id)
         }
-    }, [params.id])
+    }, [id])
 
     const fetchData = async (orderId: string) => {
         try {
@@ -179,5 +180,13 @@ export default function InvoicePage() {
 
             </div>
         </div>
+    )
+}
+
+export default function InvoicePage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading Invoice...</div>}>
+            <InvoiceContent />
+        </Suspense>
     )
 }
