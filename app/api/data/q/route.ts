@@ -66,7 +66,8 @@ export async function POST(request: Request) {
             {
                 message: errorMessage,
                 details: errorDetails,
-                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+                // DEBUG: Always return error for now to diagnose
+                error: error.message || JSON.stringify(error)
             },
             { status: 500 }
         );
