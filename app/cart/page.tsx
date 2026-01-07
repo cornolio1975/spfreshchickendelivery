@@ -59,7 +59,8 @@ export default function CartPage() {
                 setIsSearchingSuggestions(true)
                 try {
                     // CHANGED: Use absolute URL for Android, fallback to relative for web
-                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+                    // CHANGED: Force relative path to avoid CORS on localhost/mixed environments
+                    const apiUrl = ''
                     // If apiUrl is empty (web), it performs a relative fetch /api/... which works for same-origin
                     const res = await fetch(`${apiUrl}/api/delivery/suggestions?q=${encodeURIComponent(address)}`)
                     const data = await res.json()
