@@ -687,7 +687,7 @@ export default function CartPage() {
                                         getDeliveryQuote()
                                     }}
                                 >
-                                    Confirm & Continue
+                                    Confirm & Continue (v2.0)
                                 </Button>
                                 <button
                                     className="w-full py-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
@@ -699,7 +699,8 @@ export default function CartPage() {
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     )
 }
