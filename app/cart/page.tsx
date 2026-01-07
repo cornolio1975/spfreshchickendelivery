@@ -126,7 +126,9 @@ export default function CartPage() {
         setQuoteError("")
         setDeliveryFee(null)
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+        // CHANGED: Use relative path for same-domain deployment to avoid CORS/Network errors
+        const apiUrl = '';
+        console.log('[Cart] Fetching quote from relative path:', `${apiUrl}/api/data/q`);
 
         try {
             // Prepare scheduling data if applicable
@@ -137,7 +139,6 @@ export default function CartPage() {
                 scheduleAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString()
             }
 
-            // CHANGED: Use absolute URL from env for Android compatibility
             const res = await fetch(`${apiUrl}/api/data/q`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
