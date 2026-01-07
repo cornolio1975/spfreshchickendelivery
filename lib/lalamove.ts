@@ -4,7 +4,7 @@ import CryptoJS from 'crypto-js';
 const API_KEY = (process.env.LALAMOVE_API_KEY || 'pk_prod_860845508f4f025c73096e60998b2285').trim();
 const API_SECRET = (process.env.LALAMOVE_API_SECRET || 'sk_prod_apDeSy1ahaol433/zI+GUXPFttHI1DqezYoLmZLxzYKXP368pMTI94PFXg5J5yVBD').trim();
 const BASE_URL = (process.env.LALAMOVE_BASE_URL || 'https://rest.lalamove.com').trim();
-const MARKET = (process.env.LALAMOVE_MARKET || 'MY_KUL').trim();
+const MARKET = (process.env.LALAMOVE_MARKET || 'MY').trim();
 
 // Default Pickup Location (Fallback if shop GPS is missing)
 export const DEFAULT_SHOP_LOCATION = {
@@ -98,7 +98,7 @@ export class LalamoveService {
 
             const bodyObj = {
                 data: {
-                    scheduleAt: options?.scheduleAt, 
+                    scheduleAt: options?.scheduleAt,
                     serviceType: 'MOTORCYCLE',
                     stops: [
                         {
