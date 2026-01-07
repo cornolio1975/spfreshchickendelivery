@@ -531,7 +531,7 @@ export default function CartPage() {
                                             disabled={isLoadingQuote || !address.trim()}
                                             className="rounded-full text-sm"
                                         >
-                                            {isLoadingQuote ? "Calculating..." : "Get Delivery Price (v2.0)"}
+                                            {isLoadingQuote ? "Calculating..." : "Get Delivery Price"}
                                         </Button>
                                     </div>
                                     {quoteError ? (
@@ -598,7 +598,7 @@ export default function CartPage() {
                                 onClick={handleCheckout}
                                 disabled={isSubmitting}
                             >
-                                {isSubmitting ? "Processing..." : "Checkout via WhatsApp (v2.0)"}
+                                {isSubmitting ? "Processing..." : "Checkout via WhatsApp"}
                                 {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
                             </Button>
 
@@ -688,7 +688,7 @@ export default function CartPage() {
                                         getDeliveryQuote()
                                     }}
                                 >
-                                    Confirm & Continue (v2.0)
+                                    Confirm & Continue
                                 </Button>
                                 <button
                                     className="w-full py-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
