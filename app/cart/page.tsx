@@ -126,6 +126,8 @@ export default function CartPage() {
         setQuoteError("")
         setDeliveryFee(null)
 
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+
         try {
             // Prepare scheduling data if applicable
             let scheduleAt = undefined
@@ -136,7 +138,6 @@ export default function CartPage() {
             }
 
             // CHANGED: Use absolute URL from env for Android compatibility
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
             const res = await fetch(`${apiUrl}/api/data/q`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
