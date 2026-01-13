@@ -8,6 +8,7 @@ export interface Product {
     description?: string;
     options?: string[]; // e.g. cuts
     weight_options?: number[]; // e.g. [1.5, 2.0]
+    in_stock?: boolean; // Default true
 }
 
 export const products: Product[] = [

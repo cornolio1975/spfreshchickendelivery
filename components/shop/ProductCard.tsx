@@ -171,9 +171,17 @@ export function ProductCard({ product }: ProductCardProps) {
                     <Button
                         size="sm"
                         onClick={handleAddToCart}
-                        className={`rounded-full px-4 transition-all duration-300 ${isAdded ? 'bg-green-500 hover:bg-green-600' : ''}`}
+                        disabled={product.in_stock === false}
+                        className={`rounded-full px-4 transition-all duration-300 ${product.in_stock === false
+                            ? 'bg-slate-100 text-slate-400 hover:bg-slate-100 cursor-not-allowed'
+                            : isAdded
+                                ? 'bg-green-500 hover:bg-green-600'
+                                : ''
+                            }`}
                     >
-                        {isAdded ? (
+                        {product.in_stock === false ? (
+                            "Out of Stock"
+                        ) : isAdded ? (
                             <>
                                 <Check className="h-4 w-4 mr-1" />
                                 Added

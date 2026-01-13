@@ -320,6 +320,16 @@ export default function AdminPage() {
         } catch (error: any) { alert('Error: ' + error.message) }
     }
 
+    const toggleStock = async (product: Product) => {
+        try {
+            const newStatus = !product.in_stock
+            const { error } = await supabase.from('products').update({ in_stock: newStatus }).eq('id', product.id)
+            if (error) throw error
+            // Optimistic update
+            setProducts(products.map(p => p.id === product.id ? { ...p, in_stock: newStatus } : p))
+        } catch (error: any) { alert('Error: ' + error.message) }
+    }
+
     const handleProductSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         const productData = {
@@ -621,6 +631,17 @@ export default function AdminPage() {
                                     <div><label className="block text-sm font-bold mb-1">Unit</label><input className="w-full p-2 border rounded-lg" value={formData.unit} onChange={e => setFormData({ ...formData, unit: e.target.value })} /></div>
                                     <div><label className="block text-sm font-bold mb-1">Category</label><input className="w-full p-2 border rounded-lg" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} /></div>
                                     <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Image URL</label><input className="w-full p-2 border rounded-lg" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} /></div>
+                                    <div className="md:col-span-2">
+                                        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                            <input
+                                                type="checkbox"
+                                                className="w-5 h-5 rounded text-primary focus:ring-primary"
+                                                checked={formData.in_stock}
+                                                onChange={e => setFormData({ ...formData, in_stock: e.target.checked })}
+                                            />
+                                            <span className="font-bold text-slate-700">Available In Stock</span>
+                                        </label>
+                                    </div>
                                     <div className="md:col-span-2 flex gap-4 mt-4">
                                         <Button type="submit">Save</Button>
                                         <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
@@ -634,7 +655,15 @@ export default function AdminPage() {
                                 <div key={product.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                                     <div className="flex justify-between items-start mb-3">
                                         <div><h3 className="font-bold text-slate-900">{product.name}</h3><p className="text-sm text-slate-500">{product.category}</p></div>
-                                        <div className={`px-2 py-1 rounded text-xs font-bold ${product.in_stock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{product.in_stock ? 'In Stock' : 'Out'}</div>
+                                        <button
+                                            onClick={() => toggleStock(product)}
+                                            className={`px-2 py-1 rounded-full text-xs font-black uppercase transition-all ${product.in_stock
+                                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                }`}
+                                        >
+                                            {product.in_stock ? 'In Stock' : 'Out of Stock'}
+                                        </button>
                                     </div>
                                     <p className="text-lg font-black text-primary mb-3">RM {product.price.toFixed(2)} / {product.unit}</p>
                                     <div className="flex gap-2">
