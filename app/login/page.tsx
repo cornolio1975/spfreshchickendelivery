@@ -232,7 +232,7 @@ export default function LoginPage() {
                         }}
                         className="text-sm text-primary font-bold hover:underline"
                     >
-                        {isForgotPassword ? 'Back to Login' : isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                        {isForgotPassword ? 'Back to Login' : isSignUp ? 'Already have an account? Sign In' : "New to SP Fresh Chicken Delivery? Create a free account"}
                     </button>
                 </div>
 

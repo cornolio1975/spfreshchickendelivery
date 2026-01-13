@@ -45,7 +45,9 @@ export default function CartPage() {
     const [showDetailsModal, setShowDetailsModal] = useState(false)
     const [recipientName, setRecipientName] = useState("")
     const [recipientPhone, setRecipientPhone] = useState("")
+
     const [roomFloorInfo, setRoomFloorInfo] = useState("")
+    const [remarks, setRemarks] = useState("")
 
     useEffect(() => {
         fetchShops()
@@ -242,7 +244,7 @@ export default function CartPage() {
                         delivery_address: address,
                         recipient_name: recipientName,
                         recipient_phone: recipientPhone,
-                        room_floor_info: roomFloorInfo,
+                        room_floor_info: remarks ? `${roomFloorInfo} | Remarks: ${remarks}` : roomFloorInfo,
                         items: items,
                         shop_id: selectedShopId || null,
                         payment_method: 'cash',
@@ -273,6 +275,7 @@ export default function CartPage() {
             message += `${recipientName} (${recipientPhone})\n`
             message += `${address}\n`
             if (roomFloorInfo) message += `*Unit/Floor:* ${roomFloorInfo}\n`
+            if (remarks) message += `*Remarks:* ${remarks}\n`
             message += `\n`
 
             items.forEach((item, index) => {
@@ -674,6 +677,16 @@ export default function CartPage() {
                                         onChange={(e) => setRoomFloorInfo(e.target.value)}
                                     />
                                 </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">Special Requests / Remarks</label>
+                                <textarea
+                                    placeholder="e.g. Please cut into small pieces, separate packing, etc."
+                                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium min-h-[100px]"
+                                    value={remarks}
+                                    onChange={(e) => setRemarks(e.target.value)}
+                                />
                             </div>
 
                             <div className="mt-8 flex flex-col gap-3">

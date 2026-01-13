@@ -15,6 +15,7 @@ export function ProductCard({ product }: ProductCardProps) {
     const { addItem } = useCart()
     const [selectedOption, setSelectedOption] = useState(product.options?.[0])
     const [selectedWeight, setSelectedWeight] = useState(product.weight_options?.[0])
+    const [skinOption, setSkinOption] = useState("Skinned (dgn Kulit)")
     const [quantity, setQuantity] = useState(1)
     const [isAdded, setIsAdded] = useState(false)
 
@@ -24,12 +25,29 @@ export function ProductCard({ product }: ProductCardProps) {
     const finalUnit = selectedWeight ? `kg` : product.unit
 
     const handleAddToCart = () => {
+        let finalOption = ""
+
+        // Add skin option if applicable (chicken products)
+        if (product.category !== 'eggs' && product.category !== 'frozen') {
+            finalOption += `${skinOption}`
+        }
+
+        // Add prep option
+        if (selectedOption) {
+            finalOption += finalOption ? `, ${selectedOption}` : selectedOption
+        }
+
+        // Add weight option
+        if (selectedWeight) {
+            finalOption += finalOption ? `, ${selectedWeight}kg` : `${selectedWeight}kg`
+        }
+
         addItem({
             id: product.id,
             name: product.name,
             price: unitPrice, // Cart usually expects unit price, quantity is separate
             unit: finalUnit,
-            option: selectedOption ? `${selectedOption}${selectedWeight ? ` (${selectedWeight}kg)` : ''}` : (selectedWeight ? `${selectedWeight}kg` : undefined),
+            option: finalOption || undefined,
             quantity: quantity
         })
 
@@ -95,7 +113,24 @@ export function ProductCard({ product }: ProductCardProps) {
                     )
                 }
 
-                {/* Options Selector */}
+                {/* Skin Option Selector - Only for non-egg/frozen items */}
+                {product.category !== 'eggs' && product.category !== 'frozen' && (
+                    <div className="mb-3">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
+                            Skin Preference
+                        </label>
+                        <select
+                            className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            value={skinOption}
+                            onChange={(e) => setSkinOption(e.target.value)}
+                        >
+                            <option value="Skinned (dgn Kulit)">Skinned (dgn Kulit)</option>
+                            <option value="Skinless (buang Kulit)">Skinless (buang Kulit)</option>
+                        </select>
+                    </div>
+                )}
+
+                {/* Options Selector (Cuts etc) */}
                 {
                     product.options && (
                         <div className="mb-4">
