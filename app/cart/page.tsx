@@ -36,9 +36,17 @@ export default function CartPage() {
     const [shops, setShops] = useState<Shop[]>([])
     const [selectedShopId, setSelectedShopId] = useState<string>("")
 
+    // Helper to get local date string YYYY-MM-DD
+    const getLocalDateString = (date: Date) => {
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+
     // Scheduling state
     const [deliveryType, setDeliveryType] = useState<'immediate' | 'scheduled'>('immediate')
-    const [scheduledDate, setScheduledDate] = useState<string>(new Date().toISOString().split('T')[0])
+    const [scheduledDate, setScheduledDate] = useState<string>(getLocalDateString(new Date()))
     const [scheduledTime, setScheduledTime] = useState<string>("09:00")
 
     // Delivery Details Modal State
@@ -192,7 +200,7 @@ export default function CartPage() {
             const date = new Date()
             date.setDate(date.getDate() + i)
             dates.push({
-                value: date.toISOString().split('T')[0],
+                value: getLocalDateString(date), // Use local date string
                 label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : date.toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'short' })
             })
         }
@@ -216,7 +224,7 @@ export default function CartPage() {
         let filteredTimes = times.filter(t => t.value >= "08:30" && t.value <= "18:00")
 
         // Filter out past times if "Today" is selected
-        const todayStr = new Date().toISOString().split('T')[0]
+        const todayStr = getLocalDateString(new Date())
         if (scheduledDate === todayStr) {
             const now = new Date()
             // Add 1 hour buffer for preparation/delivery
