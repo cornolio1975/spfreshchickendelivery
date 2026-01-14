@@ -202,20 +202,46 @@ export default function CartPage() {
     const getAvailableTimes = () => {
         const times = []
         for (let hour = 8; hour <= 18; hour++) {
-            const h24_0 = hour.toString().padStart(2, '0')
-            const h24_30 = hour.toString().padStart(2, '0')
+            const h24 = hour.toString().padStart(2, '0')
 
             // Generate AM/PM labels
             const period = hour >= 12 ? 'PM' : 'AM'
             const h12 = hour > 12 ? hour - 12 : hour
             const h12Str = h12.toString()
 
-            times.push({ value: `${h24_0}:00`, label: `${h12Str}:00 ${period}` })
-            times.push({ value: `${h24_30}:30`, label: `${h12Str}:30 ${period}` })
+            times.push({ value: `${h24}:00`, label: `${h12Str}:00 ${period}` })
+            times.push({ value: `${h24}:30`, label: `${h12Str}:30 ${period}` })
         }
-        // Filter out times outside 8:30 AM - 6:00 PM
-        return times.filter(t => t.value >= "08:30" && t.value <= "18:00")
+
+        let filteredTimes = times.filter(t => t.value >= "08:30" && t.value <= "18:00")
+
+        // Filter out past times if "Today" is selected
+        const todayStr = new Date().toISOString().split('T')[0]
+        if (scheduledDate === todayStr) {
+            const now = new Date()
+            // Add 1 hour buffer for preparation/delivery
+            const bufferTime = new Date(now.getTime() + 60 * 60 * 1000)
+            const currentHours = bufferTime.getHours()
+            const currentMinutes = bufferTime.getMinutes()
+            const currentTimeValue = `${currentHours.toString().padStart(2, '0')}:${currentMinutes.toString().padStart(2, '0')}`
+
+            filteredTimes = filteredTimes.filter(t => t.value > currentTimeValue)
+        }
+
+        return filteredTimes
     }
+
+    // Auto-select valid time when date changes
+    useEffect(() => {
+        if (deliveryType === 'scheduled') {
+            const availableTimes = getAvailableTimes()
+            // If currently selected time is not in the available list (or is empty), select the first available one
+            const isValid = availableTimes.some(t => t.value === scheduledTime)
+            if (!isValid && availableTimes.length > 0) {
+                setScheduledTime(availableTimes[0].value)
+            }
+        }
+    }, [scheduledDate, deliveryType])
 
     const finalTotal = total + (deliveryFee || 0)
 
