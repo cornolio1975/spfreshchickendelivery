@@ -14,6 +14,7 @@ async function testLalamoveQuote() {
         data: {
             serviceType: "MOTORCYCLE",
             language: "en_MY",
+            specialRequests: ["THERMAL_BAG_1"],
             stops: [
                 {
                     coordinates: { lat: "3.1578", lng: "101.7118" }, // KLCC

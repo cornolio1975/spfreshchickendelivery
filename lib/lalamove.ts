@@ -120,6 +120,7 @@ export class LalamoveService {
                 data: {
                     serviceType: "MOTORCYCLE",
                     language: "en_MY",
+                    specialRequests: ["THERMAL_BAG_1"],
                     stops: [
                         {
                             coordinates: { lat: pickupLat.toString(), lng: pickupLng.toString() },

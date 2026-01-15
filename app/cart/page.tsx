@@ -48,6 +48,8 @@ export default function CartPage() {
     const [deliveryType, setDeliveryType] = useState<'immediate' | 'scheduled'>('immediate')
     const [scheduledDate, setScheduledDate] = useState<string>(getLocalDateString(new Date()))
     const [scheduledTime, setScheduledTime] = useState<string>("09:00")
+    // Business Open State
+    const [isBusinessOpen, setIsBusinessOpen] = useState(true)
 
     // Delivery Details Modal State
     const [showDetailsModal, setShowDetailsModal] = useState(false)
@@ -195,7 +197,7 @@ export default function CartPage() {
     }
 
     // Business Hours Check
-    const checkBusinessHours = () => {
+    const checkBusinessHours = (suppressAlert = false) => {
         const now = new Date();
         const hours = now.getHours();
         const minutes = now.getMinutes();
@@ -203,12 +205,23 @@ export default function CartPage() {
         const openTime = 8 * 60 + 30; // 08:30
         const closeTime = 18 * 60;    // 18:00
 
-        if (currentTime < openTime || currentTime > closeTime) {
+        const isOpen = currentTime >= openTime && currentTime <= closeTime;
+
+        if (!isOpen && !suppressAlert) {
             alert("We are currently closed for immediate orders.\nBusiness Hours: 8:30 AM - 6:00 PM.\n\nPlease choose 'Schedule Future' to place an order for later.");
-            return false;
         }
-        return true;
+        return isOpen;
     }
+
+    // Initialize Business State
+    useEffect(() => {
+        const isOpen = checkBusinessHours(true);
+        setIsBusinessOpen(isOpen);
+        if (!isOpen) {
+            setDeliveryType('scheduled');
+        }
+    }, [])
+
 
     const getAvailableDates = () => {
         const dates = []
@@ -491,9 +504,10 @@ export default function CartPage() {
                                             className={`flex-1 py-2 px-4 rounded-xl text-sm font-bold transition-all ${deliveryType === 'immediate'
                                                 ? 'bg-primary text-white shadow-md shadow-primary/20'
                                                 : 'bg-white text-slate-500 border border-slate-200'
-                                                }`}
+                                                } ${!isBusinessOpen ? 'opacity-50 grayscale' : ''}`}
                                         >
                                             Order Now
+                                            {!isBusinessOpen && <span className="block text-[9px] text-red-500 font-black uppercase">Closed</span>}
                                         </button>
                                         <button
                                             onClick={() => setDeliveryType('scheduled')}
