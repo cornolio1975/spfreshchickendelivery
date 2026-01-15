@@ -194,6 +194,22 @@ export default function CartPage() {
         }
     }
 
+    // Business Hours Check
+    const checkBusinessHours = () => {
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const currentTime = hours * 60 + minutes;
+        const openTime = 8 * 60 + 30; // 08:30
+        const closeTime = 18 * 60;    // 18:00
+
+        if (currentTime < openTime || currentTime > closeTime) {
+            alert("We are currently closed for immediate orders.\nBusiness Hours: 8:30 AM - 6:00 PM.\n\nPlease choose 'Schedule Future' to place an order for later.");
+            return false;
+        }
+        return true;
+    }
+
     const getAvailableDates = () => {
         const dates = []
         for (let i = 0; i < 5; i++) {
@@ -254,6 +270,11 @@ export default function CartPage() {
     const finalTotal = total + (deliveryFee || 0)
 
     const handleCheckout = async () => {
+        // Validation: Business Hours for Immediate Delivery
+        if (deliveryType === 'immediate' && !checkBusinessHours()) {
+            return
+        }
+
         if (!address.trim()) {
             alert("Please enter a delivery address.")
             return
@@ -462,7 +483,11 @@ export default function CartPage() {
                                     <label className="block text-sm font-bold text-slate-700 mb-3">Delivery Timing</label>
                                     <div className="flex gap-2 mb-4">
                                         <button
-                                            onClick={() => setDeliveryType('immediate')}
+                                            onClick={() => {
+                                                if (checkBusinessHours()) {
+                                                    setDeliveryType('immediate')
+                                                }
+                                            }}
                                             className={`flex-1 py-2 px-4 rounded-xl text-sm font-bold transition-all ${deliveryType === 'immediate'
                                                 ? 'bg-primary text-white shadow-md shadow-primary/20'
                                                 : 'bg-white text-slate-500 border border-slate-200'
