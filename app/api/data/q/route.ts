@@ -44,6 +44,14 @@ export async function POST(request: Request) {
         console.log('[API Route] Calling LalamoveService.getQuotation...');
         const quotation = await LalamoveService.getQuotation(address, pickupLocation, { lat, lng, scheduleAt });
 
+        // MARKUP: Add RM 1.00 to the delivery fee
+        if (quotation?.data?.priceBreakdown?.total) {
+            const originalPrice = parseFloat(quotation.data.priceBreakdown.total);
+            const markedUpPrice = (originalPrice + 1.00).toFixed(2);
+            quotation.data.priceBreakdown.total = markedUpPrice;
+            console.log(`[API Route] Applied markup: ${originalPrice} -> ${markedUpPrice}`);
+        }
+
         console.log('[API Route] Quotation received successfully');
         return NextResponse.json(quotation);
     } catch (error: any) {
