@@ -5,11 +5,23 @@ import Link from 'next/link'
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, MessageCircle, Home, ShoppingBag, Loader2 } from "lucide-react"
 import { Suspense, useEffect, useState } from 'react'
+import { useCart } from "@/context/CartContext"
 
 function OrderConfirmationContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
+    const { clearCart } = useCart()
     const [isRedirecting, setIsRedirecting] = useState(false)
+
+    useEffect(() => {
+        if (searchParams.get('clearCart') === 'true') {
+            clearCart()
+            // Optional: Remove query param to clean up URL
+            const newParams = new URLSearchParams(searchParams.toString())
+            newParams.delete('clearCart')
+            router.replace(`/order-confirmation?${newParams.toString()}`)
+        }
+    }, [searchParams, clearCart, router])
 
     // Robust fallbacks for parameters
     const userId = searchParams.get('userId') || ''

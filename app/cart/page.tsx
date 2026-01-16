@@ -3,10 +3,10 @@
 import { useCart } from "@/context/CartContext"
 import { useAuth } from "@/context/AuthContext"
 import { Button } from "@/components/ui/button"
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, MapPin, Store, ChevronLeft, X } from "lucide-react"
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, MapPin, Store, ChevronLeft, X, CheckCircle2, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 
 /*
@@ -18,7 +18,44 @@ interface Shop {
     status: 'open' | 'closed' | 'hidden'
 }
 
+// Error Boundary Component
+class CartErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props)
+        this.state = { hasError: false, error: null }
+    }
+
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error }
+    }
+
+    componentDidCatch(error: Error, errorInfo: any) {
+        console.error("Cart Error Caught:", error, errorInfo)
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="p-8 text-center">
+                    <h2 className="text-xl font-bold text-red-600 mb-2">Something went wrong.</h2>
+                    <p className="text-sm text-slate-500 mb-4">{this.state.error?.message}</p>
+                    <button onClick={() => window.location.reload()} className="bg-slate-200 px-4 py-2 rounded">Reload</button>
+                </div>
+            )
+        }
+        return this.props.children
+    }
+}
+
 export default function CartPage() {
+    return (
+        <CartErrorBoundary>
+            <CartContent />
+        </CartErrorBoundary>
+    )
+}
+
+function CartContent() {
     const { items, removeItem, updateQuantity, total, clearCart } = useCart()
     const { user, profile } = useAuth()
     const router = useRouter()
@@ -60,9 +97,24 @@ export default function CartPage() {
     const [recipientName, setRecipientName] = useState("")
     const [recipientPhone, setRecipientPhone] = useState("")
 
+    // Success State
+    const [orderSuccess, setOrderSuccess] = useState<{
+        orderNo: string
+        total: string
+        verifyUrl: string
+    } | null>(null)
+
     useEffect(() => {
         setMounted(true)
     }, [])
+
+    // Defer Cart Clearing logic
+    useEffect(() => {
+        if (orderSuccess) {
+            // Clear cart ONLY after success state is rendered
+            clearCart()
+        }
+    }, [orderSuccess, clearCart])
 
     const [roomFloorInfo, setRoomFloorInfo] = useState("")
     const [remarks, setRemarks] = useState("")
@@ -152,8 +204,11 @@ export default function CartPage() {
             // Prepare scheduling data if applicable
             let scheduleAt = undefined
             if (deliveryType === 'scheduled') {
-                // Lalamove expects ISO string or similar. 
-                scheduleAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString()
+                if (!scheduledDate || !scheduledTime) throw new Error("Please select a valid date and time")
+                // Lalamove expects ISO string. Validate date validity.
+                const d = new Date(`${scheduledDate}T${scheduledTime}:00`)
+                if (isNaN(d.getTime())) throw new Error("Invalid schedule date format")
+                scheduleAt = d.toISOString()
             }
 
             const res = await fetch(`/api/data/q`, {
@@ -286,7 +341,9 @@ export default function CartPage() {
 
     const finalTotal = total + (deliveryFee || 0)
 
-    const handleCheckout = async () => {
+    const handleCheckout = async (e?: React.MouseEvent) => {
+        if (e && e.preventDefault) e.preventDefault()
+
         const isGuest = typeof window !== 'undefined' && localStorage.getItem('guestMode') === 'true'
         if (!user && !isGuest) {
             router.push('/login?redirect=/cart')
@@ -377,13 +434,21 @@ export default function CartPage() {
             message += `\n\n_Order ID: ${orderId.split('-')[0]}..._`
 
             // 4. Clear Cart and Redirect
-            // 4. Clear Cart and Redirect
-            clearCart()
+            // 4. Success - In-Page State (No Redirect)
+            const verifyUrl = `https://wa.me/60129092013?text=${encodeURIComponent(`Hi, I'd like to verify my Order #${orderNo}. Total: RM ${finalTotal.toFixed(2)}`)}`
 
-            // Robust Redirect: Send to confirmation page for manual verification
-            // This prevents Safari popup blocker issues
-            const redirectUrl = `/order-confirmation?orderNo=${orderNo}&total=${finalTotal.toFixed(2)}`
-            window.location.href = redirectUrl
+            setOrderSuccess({
+                orderNo,
+                total: finalTotal.toFixed(2),
+                verifyUrl
+            })
+
+            // Defer cart clearing to useEffect to prevent state update collisions/unmount crashes
+            // clearCart() - MOVED to useEffect below
+
+            // Safari Crash Fix: Use instant scroll instead of smooth
+            window.scrollTo(0, 0)
+
         } catch (error: any) {
             console.error("[Checkout] Full error details:", JSON.stringify(error, null, 2))
             const errorMsg = error.message || error.details || JSON.stringify(error)
@@ -393,8 +458,56 @@ export default function CartPage() {
         }
     }
 
-    // Prevent hydration mismatch by only rendering on client
     if (!mounted) return null
+
+    // Success View
+    if (orderSuccess) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+                <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md text-center border border-slate-100 animate-in fade-in zoom-in duration-300">
+                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <CheckCircle2 className="h-10 w-10 text-green-600" />
+                    </div>
+
+                    <h1 className="text-2xl font-black text-slate-900 mb-2">Order Placed!</h1>
+                    <p className="text-slate-500 mb-6">
+                        Your order <span className="font-bold text-slate-800">#{orderSuccess.orderNo}</span> has been submitted.
+                    </p>
+
+                    <div className="bg-slate-50 p-4 rounded-2xl mb-8 border border-slate-100">
+                        <p className="text-xs text-slate-400 uppercase font-bold mb-1">Total Amount</p>
+                        <p className="text-2xl font-black text-slate-900">RM {orderSuccess.total}</p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <a
+                            href={orderSuccess.verifyUrl}
+                            className="flex items-center justify-center w-full py-3.5 px-6 rounded-xl font-bold bg-[#25D366] text-white shadow-lg shadow-green-200 hover:bg-[#20bd5a] transition-all active:scale-95"
+                        >
+                            <MessageCircle className="w-5 h-5 mr-2" />
+                            Verify on WhatsApp
+                        </a>
+
+                        <Button
+                            variant="outline"
+                            className="w-full rounded-xl py-6 font-bold border-slate-200 text-slate-600 hover:bg-slate-50"
+                            onClick={() => {
+                                setOrderSuccess(null)
+                                router.push('/shop')
+                            }}
+                        >
+                            <ShoppingBag className="w-4 h-4 mr-2" />
+                            Continue Shopping
+                        </Button>
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 mt-8">
+                        Please verify your order on WhatsApp to confirm delivery details.
+                    </p>
+                </div>
+            </div>
+        )
+    }
 
     if (items.length === 0) {
         return (

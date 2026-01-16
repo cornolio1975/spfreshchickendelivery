@@ -31,10 +31,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         try {
             const saved = localStorage.getItem("cart")
             if (saved) {
-                setItems(JSON.parse(saved))
+                const parsed = JSON.parse(saved)
+                // Sanitize data: Ensure price is a number
+                const sanitized = Array.isArray(parsed) ? parsed.map((item: any) => ({
+                    ...item,
+                    price: typeof item.price === 'string' ? parseFloat(item.price) : Number(item.price || 0),
+                    quantity: Number(item.quantity || 1)
+                })) : []
+                setItems(sanitized)
             }
         } catch (e) {
             console.error("Failed to load cart from localStorage", e)
+            setItems([])
         }
         setIsLoaded(true)
     }, [])
