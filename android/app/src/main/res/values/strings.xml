@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">SP Fresh Chicken Delivery</string>
-    <string name="title_activity_main">SP Fresh Chicken Delivery</string>
-    <string name="package_name">com.spfreshchicken.delivery</string>
-    <string name="custom_url_scheme">com.spfreshchicken.delivery</string>
-</resources>

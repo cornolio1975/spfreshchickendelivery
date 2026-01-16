@@ -9,9 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@capacitor/android": "^8.0.0",
-    "@capacitor/cli": "^8.0.0",
-    "@capacitor/core": "^8.0.0",
     "@lalamove/lalamove-js": "^1.1.0",
     "@radix-ui/react-slot": "^1.2.4",
     "@supabase/supabase-js": "^2.86.0",
