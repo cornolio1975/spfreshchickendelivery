@@ -25,10 +25,14 @@ export function GlobalErrorHandler() {
                 const lastReload = sessionStorage.getItem('chunk_reload_time')
                 const now = Date.now()
 
-                if (!lastReload || now - parseInt(lastReload) > 10000) {
+                if (!lastReload || now - parseInt(lastReload) > 5000) {
                     console.log('Reloading page to recover from chunk error...')
                     sessionStorage.setItem('chunk_reload_time', String(now))
-                    window.location.reload()
+
+                    // Helper to bust cache
+                    const url = new URL(window.location.href)
+                    url.searchParams.set('refresh', String(now))
+                    window.location.href = url.toString()
                 }
             }
         }

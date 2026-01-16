@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: false,
   },
+  // Improve cache reliability
+  generateBuildId: async () => {
+    // You can use the commit hash if available, or a timestamp
+    // For now, simple timestamp to ensure uniqueness per build
+    return `build-${Date.now()}`
+  },
 };
 
 export default nextConfig;
