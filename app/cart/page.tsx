@@ -58,6 +58,10 @@ export default function CartPage() {
     const [recipientName, setRecipientName] = useState("")
     const [recipientPhone, setRecipientPhone] = useState("")
 
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
     const [roomFloorInfo, setRoomFloorInfo] = useState("")
     const [remarks, setRemarks] = useState("")
 
@@ -391,6 +395,9 @@ export default function CartPage() {
             setIsSubmitting(false)
         }
     }
+
+    // Prevent hydration mismatch by only rendering on client
+    if (!mounted) return null
 
     if (items.length === 0) {
         return (
