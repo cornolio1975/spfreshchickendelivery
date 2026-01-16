@@ -14,8 +14,15 @@ export default function GlobalError({
 
         // ChunkLoadError: Auto-reload to fetch new chunks
         if (error.message.includes('ChunkLoadError') || error.message.includes('Loading chunk')) {
-            console.log('ChunkLoadError detected, reloading page...')
-            window.location.reload()
+            // Prevent infinite reload loops
+            const lastReload = sessionStorage.getItem('chunk_reload_time')
+            const now = Date.now()
+
+            if (!lastReload || now - parseInt(lastReload) > 10000) {
+                console.log('ChunkLoadError detected, reloading page...')
+                sessionStorage.setItem('chunk_reload_time', String(now))
+                window.location.reload()
+            }
         }
     }, [error])
 
