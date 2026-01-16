@@ -46,10 +46,12 @@ export default function CartPage() {
 
     // Scheduling state
     const [deliveryType, setDeliveryType] = useState<'immediate' | 'scheduled'>('immediate')
-    const [scheduledDate, setScheduledDate] = useState<string>(getLocalDateString(new Date()))
+    const [scheduledDate, setScheduledDate] = useState<string>("")
     const [scheduledTime, setScheduledTime] = useState<string>("09:00")
     // Business Open State
     const [isBusinessOpen, setIsBusinessOpen] = useState(true)
+    // Client-side hydration check
+    const [mounted, setMounted] = useState(false)
 
     // Delivery Details Modal State
     const [showDetailsModal, setShowDetailsModal] = useState(false)
@@ -60,6 +62,10 @@ export default function CartPage() {
     const [remarks, setRemarks] = useState("")
 
     useEffect(() => {
+        setMounted(true)
+        // Initialize date on client only to match local time
+        setScheduledDate(getLocalDateString(new Date()))
+
         fetchShops()
         fetchDefaultFee()
     }, [])
@@ -367,10 +373,13 @@ export default function CartPage() {
             message += `\n\n_Order ID: ${orderId.split('-')[0]}..._`
 
             // 4. Clear Cart and Redirect
+            // 4. Clear Cart and Redirect
             clearCart()
 
-            const url = `https://wa.me/60129092013?text=${encodeURIComponent(message)}`
-            window.open(url, '_blank')
+            // Robust Redirect: Send to confirmation page for manual verification
+            // This prevents Safari popup blocker issues
+            const redirectUrl = `/order-confirmation?orderNo=${orderNo}&total=${finalTotal.toFixed(2)}`
+            window.location.href = redirectUrl
 
             window.location.href = '/'
 
@@ -413,7 +422,7 @@ export default function CartPage() {
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Cart Items */}
                     <div className="lg:col-span-2 space-y-4">
-                        {items.map((item) => (
+                        {items?.map((item) => (
                             <div key={`${item.id}-${item.option}`} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex gap-4 items-center">
                                 <div className="flex-grow">
                                     <h3 className="font-bold text-slate-900">{item.name}</h3>
@@ -520,7 +529,7 @@ export default function CartPage() {
                                         </button>
                                     </div>
 
-                                    {deliveryType === 'scheduled' && (
+                                    {deliveryType === 'scheduled' && mounted && (
                                         <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                             <div>
                                                 <label className="block text-[10px] uppercase font-black text-slate-400 mb-1 ml-1">Choose Date</label>

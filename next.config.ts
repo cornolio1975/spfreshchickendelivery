@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Safari compatibility improvements
+  compiler: {
+    removeConsole: false,
+  },
 };
 
 export default nextConfig;

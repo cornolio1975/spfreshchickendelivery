@@ -199,7 +199,7 @@ export default function OrdersPage() {
                                                 Order Summary
                                             </div>
                                             <div className="space-y-2">
-                                                {order.items.map((item, idx) => (
+                                                {order.items?.map((item, idx) => (
                                                     <div key={idx} className="flex justify-between items-center text-sm">
                                                         <span className="text-slate-700 font-bold">
                                                             {item.quantity}x {item.name}

@@ -28,13 +28,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     // Load from local storage
     useEffect(() => {
-        const saved = localStorage.getItem("cart")
-        if (saved) {
-            try {
+        try {
+            const saved = localStorage.getItem("cart")
+            if (saved) {
                 setItems(JSON.parse(saved))
-            } catch (e) {
-                console.error("Failed to parse cart", e)
             }
+        } catch (e) {
+            console.error("Failed to load cart from localStorage", e)
         }
         setIsLoaded(true)
     }, [])
@@ -42,7 +42,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Save to local storage
     useEffect(() => {
         if (isLoaded) {
-            localStorage.setItem("cart", JSON.stringify(items))
+            try {
+                localStorage.setItem("cart", JSON.stringify(items))
+            } catch (e) {
+                console.error("Failed to save cart to localStorage", e)
+            }
         }
     }, [items, isLoaded])
 
