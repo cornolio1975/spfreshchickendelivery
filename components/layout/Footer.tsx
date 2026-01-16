@@ -75,9 +75,6 @@ export function Footer() {
                         <h4 className="font-bold mb-6 text-lg">Our Products</h4>
                         <ul className="space-y-3 text-sm text-slate-400">
                             <li><Link href="/shop?cat=whole" className="hover:text-primary transition-colors">Whole Chicken</Link></li>
-                            <li><Link href="/shop?cat=parts" className="hover:text-primary transition-colors">Chicken Parts</Link></li>
-                            <li><Link href="/shop?cat=eggs" className="hover:text-primary transition-colors">Fresh Eggs</Link></li>
-                            <li><Link href="/shop?cat=frozen" className="hover:text-primary transition-colors">Frozen Goods</Link></li>
                         </ul>
                     </div>
 

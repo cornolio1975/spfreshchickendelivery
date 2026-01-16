@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, MapPin, Store, ChevronLeft, X } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 
@@ -20,6 +21,7 @@ interface Shop {
 export default function CartPage() {
     const { items, removeItem, updateQuantity, total, clearCart } = useCart()
     const { user, profile } = useAuth()
+    const router = useRouter()
     const [address, setAddress] = useState("")
     const [suggestions, setSuggestions] = useState<{ address: string, lat: string, lng: string }[]>([])
     const [selectedCoords, setSelectedCoords] = useState<{ lat: string, lng: string } | null>(null)
@@ -80,11 +82,8 @@ export default function CartPage() {
             if (address.length >= 3 && showSuggestions) {
                 setIsSearchingSuggestions(true)
                 try {
-                    // CHANGED: Use absolute URL for Android, fallback to relative for web
-                    // CHANGED: Force relative path to avoid CORS on localhost/mixed environments
-                    const apiUrl = ''
-                    // If apiUrl is empty (web), it performs a relative fetch /api/... which works for same-origin
-                    const res = await fetch(`${apiUrl}/api/delivery/suggestions?q=${encodeURIComponent(address)}`)
+                    // Fetch suggestions from the local API
+                    const res = await fetch(`/api/delivery/suggestions?q=${encodeURIComponent(address)}`)
                     const data = await res.json()
                     if (data.suggestions) {
                         setSuggestions(data.suggestions)
@@ -149,20 +148,15 @@ export default function CartPage() {
         setQuoteError("")
         setDeliveryFee(null)
 
-        // CHANGED: Use relative path for same-domain deployment to avoid CORS/Network errors
-        const apiUrl = '';
-        console.log('[Cart] Fetching quote from relative path:', `${apiUrl}/api/data/q`);
-
         try {
             // Prepare scheduling data if applicable
             let scheduleAt = undefined
             if (deliveryType === 'scheduled') {
                 // Lalamove expects ISO string or similar. 
-                // We'll send the formatted UTC string.
                 scheduleAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString()
             }
 
-            const res = await fetch(`${apiUrl}/api/data/q`, {
+            const res = await fetch(`/api/data/q`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -196,7 +190,7 @@ export default function CartPage() {
         } catch (err: any) {
             console.error('[Cart] Network error details:', err)
             // Log the URL we tried to hit for debugging
-            const attemptedUrl = `${apiUrl}/api/data/q`;
+            const attemptedUrl = `/api/data/q`;
             setDeliveryFee(defaultFee)
             setIsUsingDefaultFee(true)
             setQuoteError(`Network Error (${attemptedUrl}): ${err.message || "Connection failed"}`)
@@ -293,6 +287,12 @@ export default function CartPage() {
     const finalTotal = total + (deliveryFee || 0)
 
     const handleCheckout = async () => {
+        const isGuest = typeof window !== 'undefined' && localStorage.getItem('guestMode') === 'true'
+        if (!user && !isGuest) {
+            router.push('/login?redirect=/cart')
+            return
+        }
+
         // Validation: Business Hours for Immediate Delivery
         if (deliveryType === 'immediate' && !checkBusinessHours()) {
             return
@@ -384,9 +384,6 @@ export default function CartPage() {
             // This prevents Safari popup blocker issues
             const redirectUrl = `/order-confirmation?orderNo=${orderNo}&total=${finalTotal.toFixed(2)}`
             window.location.href = redirectUrl
-
-            window.location.href = '/'
-
         } catch (error: any) {
             console.error("[Checkout] Full error details:", JSON.stringify(error, null, 2))
             const errorMsg = error.message || error.details || JSON.stringify(error)

@@ -15,9 +15,9 @@ export function Navbar() {
 
     return (
         <nav className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 shadow-sm">
-            <div className="container mx-auto flex h-24 items-center justify-between px-4 sm:px-6 lg:px-8">
-                <Link href="/" className="flex items-center gap-4 group transition-transform hover:scale-[1.02]">
-                    <div className="relative h-16 w-16 overflow-hidden rounded-xl shadow-md border border-slate-100">
+            <div className="container mx-auto flex h-16 md:h-24 items-center justify-between px-4 sm:px-6 lg:px-8">
+                <Link href="/" className="flex items-center gap-2 md:gap-4 group transition-transform hover:scale-[1.02]">
+                    <div className="relative h-10 w-10 md:h-16 md:w-16 overflow-hidden rounded-xl shadow-md border border-slate-100">
                         <Image
                             src="/logo.png"
                             alt="SP Fresh Chicken Logo"

@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LogIn, UserPlus, Eye, EyeOff, Mail, ArrowRight } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginContent() {
     const [isSignUp, setIsSignUp] = useState(false)
 
     // Form fields
@@ -26,6 +26,8 @@ export default function LoginPage() {
 
     const { signIn, signUp, forgotPassword } = useAuth()
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const redirectPath = searchParams.get('redirect')
 
     const handleForgotPassword = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -63,16 +65,21 @@ export default function LoginPage() {
                 }
                 await signUp(email, password, fullName, `+60${phone.replace(/^0/, '')}`)
                 setMessage('Account created successfully!')
-                setTimeout(() => router.push('/'), 1500)
+                setTimeout(() => router.push(redirectPath || '/'), 1500)
             } else {
                 await signIn(email, password)
-                router.push('/')
+                router.push(redirectPath || '/')
             }
         } catch (err: any) {
             setError(err.message || 'An error occurred')
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleGuest = () => {
+        localStorage.setItem('guestMode', 'true')
+        router.push(redirectPath || '/shop')
     }
 
     return (
@@ -258,12 +265,10 @@ export default function LoginPage() {
                         variant="outline"
                         size="lg"
                         className="w-full rounded-full font-bold border-2 hover:bg-slate-50 hover:text-primary transition-colors"
-                        asChild
+                        onClick={handleGuest}
                     >
-                        <Link href="/shop">
-                            Continue as Guest
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
+                        Continue as Guest
+                        <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                     <p className="text-xs text-slate-400 mt-3 px-4 leading-relaxed">
                         You can still place orders without an email. We'll ask for your delivery details at checkout.
@@ -271,5 +276,17 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     )
 }
