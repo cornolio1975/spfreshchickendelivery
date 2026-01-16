@@ -14,11 +14,20 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: false,
   },
-  // Improve cache reliability
-  generateBuildId: async () => {
-    // You can use the commit hash if available, or a timestamp
-    // For now, simple timestamp to ensure uniqueness per build
-    return `build-${Date.now()}`
+  // Force browser to revalidate HTML to prevent 404 chunk errors
+  headers: async () => {
+    return [
+      {
+        // Match all paths EXCEPT _next (static files), favicon, and api
+        source: '/((?!_next|favicon.ico|api).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
+    ]
   },
 };
 
