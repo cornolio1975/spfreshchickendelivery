@@ -24,7 +24,7 @@ function LoginContent() {
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState('')
 
-    const { signIn, signUp, forgotPassword } = useAuth()
+    const { signIn, signUp, forgotPassword, loginAsGuest } = useAuth()
     const router = useRouter()
     const searchParams = useSearchParams()
     const redirectPath = searchParams.get('redirect')
@@ -77,8 +77,9 @@ function LoginContent() {
         }
     }
 
+
     const handleGuest = () => {
-        localStorage.setItem('guestMode', 'true')
+        loginAsGuest()
         router.push(redirectPath || '/shop')
     }
 

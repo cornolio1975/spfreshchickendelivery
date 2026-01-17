@@ -11,7 +11,7 @@ import Image from "next/image"
 export function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const { items } = useCart()
-    const { user, profile, signOut } = useAuth()
+    const { user, profile, signOut, isGuest, loginAsGuest } = useAuth()
 
     return (
         <nav className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 shadow-sm">
@@ -75,13 +75,30 @@ export function Navbar() {
                                 <LogOut className="h-4 w-4" />
                             </Button>
                         </div>
+                    ) : isGuest ? (
+                        <div className="hidden md:flex items-center gap-3">
+                            <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">
+                                Guest Mode
+                            </span>
+                            <Link href="/login">
+                                <Button variant="default" size="sm" className="rounded-full">
+                                    <User className="mr-2 h-4 w-4" />
+                                    Login / Sign Up
+                                </Button>
+                            </Link>
+                        </div>
                     ) : (
-                        <Link href="/login" className="hidden md:block">
-                            <Button variant="default" size="sm" className="rounded-full">
-                                <User className="mr-2 h-4 w-4" />
-                                Login
+                        <div className="hidden md:flex items-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => loginAsGuest()} className="font-bold text-slate-600 hover:text-primary">
+                                Continue as Guest
                             </Button>
-                        </Link>
+                            <Link href="/login">
+                                <Button variant="default" size="sm" className="rounded-full shadow-md hover:shadow-lg transition-all">
+                                    <User className="mr-2 h-4 w-4" />
+                                    Login
+                                </Button>
+                            </Link>
+                        </div>
                     )}
 
                     <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -111,8 +128,25 @@ export function Navbar() {
                                 Logout
                             </Button>
                         </div>
+                    ) : isGuest ? (
+                        <div className="pt-4 border-t space-y-3">
+                            <div className="flex items-center gap-2 justify-center bg-amber-50 p-2 rounded-lg">
+                                <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">
+                                    Guest Mode
+                                </span>
+                            </div>
+                            <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+                                <Button variant="default" size="sm" className="w-full rounded-full">
+                                    <User className="mr-2 h-4 w-4" />
+                                    Login / Sign Up
+                                </Button>
+                            </Link>
+                        </div>
                     ) : (
-                        <div className="pt-4 border-t">
+                        <div className="pt-4 border-t space-y-3">
+                            <Button variant="ghost" size="sm" onClick={() => { loginAsGuest(); setIsMenuOpen(false) }} className="w-full rounded-full font-bold text-slate-600 border">
+                                Continue as Guest
+                            </Button>
                             <Link href="/login" onClick={() => setIsMenuOpen(false)}>
                                 <Button variant="default" size="sm" className="w-full rounded-full">
                                     <User className="mr-2 h-4 w-4" />

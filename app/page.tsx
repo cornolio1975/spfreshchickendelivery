@@ -6,11 +6,13 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, CheckCircle, Truck, Clock, ShieldCheck } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/context/AuthContext"
 import { products } from "@/data/products"
 import { ProductCard } from "@/components/shop/ProductCard"
 import { useState } from "react"
 
 export default function Home() {
+  const { user, isGuest } = useAuth()
   const [settings, setSettings] = useState<any>(null)
   const [dbProducts, setDbProducts] = useState<any[]>([])
   const [showResetNotice, setShowResetNotice] = useState(false)
@@ -105,8 +107,14 @@ export default function Home() {
               </p>
 
               <div className="flex flex-wrap gap-4 pt-4">
-                <Button size="lg" className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-black text-lg px-8 rounded-full shadow-lg" asChild>
-                  <Link href="/shop">Shop Now</Link>
+                <Button size="lg" className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-black text-lg px-8 rounded-full shadow-lg" onClick={() => {
+                  if (user || isGuest) {
+                    window.location.href = "/shop"
+                  } else {
+                    window.location.href = "/login?redirect=/shop"
+                  }
+                }}>
+                  Shop Now
                 </Button>
                 <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-blue-900 font-bold rounded-full" asChild>
                   <Link href="/wholesale">Wholesale Pricing</Link>

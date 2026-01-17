@@ -7,10 +7,12 @@ import { User } from '@supabase/supabase-js'
 interface AuthContextType {
     user: User | null
     profile: any | null
+    isGuest: boolean
     loading: boolean
     signIn: (email: string, password: string) => Promise<void>
     signUp: (email: string, password: string, fullName: string, phone: string) => Promise<void>
     signOut: () => Promise<void>
+    loginAsGuest: () => void
     forgotPassword: (email: string) => Promise<void>
     updatePassword: (password: string) => Promise<void>
 }
@@ -22,7 +24,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [profile, setProfile] = useState<any | null>(null)
     const [loading, setLoading] = useState(true)
 
+    const [isGuest, setIsGuest] = useState(false)
+
     useEffect(() => {
+        // Check for guest mode on mount
+        if (typeof window !== 'undefined') {
+            setIsGuest(localStorage.getItem('guestMode') === 'true')
+        }
+
         // 1. IMPROVED REDIRECT: Catch password recovery immediately
         // Redirecting before getSession/onAuthStateChange ensures we don't lose the token
         if (typeof window !== 'undefined' &&
@@ -50,6 +59,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(session?.user ?? null)
 
             if (session?.user) {
+                // If user logged in, clear guest mode
+                localStorage.removeItem('guestMode')
+                setIsGuest(false)
                 fetchProfile(session.user.id)
             } else {
                 setLoading(false)
@@ -69,6 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             setUser(session?.user ?? null)
             if (session?.user) {
+                // User logged in, clear guest
+                localStorage.removeItem('guestMode')
+                setIsGuest(false)
                 fetchProfile(session.user.id)
             } else {
                 setProfile(null)
@@ -158,7 +173,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const signOut = async () => {
         const { error } = await supabase.auth.signOut()
         localStorage.removeItem('guestMode')
+        setIsGuest(false)
         if (error) throw error
+    }
+
+    const loginAsGuest = () => {
+        localStorage.setItem('guestMode', 'true')
+        setIsGuest(true)
     }
 
     const forgotPassword = async (email: string) => {
@@ -174,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, forgotPassword, updatePassword }}>
+        <AuthContext.Provider value={{ user, profile, isGuest, loading, signIn, signUp, signOut, loginAsGuest, forgotPassword, updatePassword }}>
             {children}
         </AuthContext.Provider>
     )

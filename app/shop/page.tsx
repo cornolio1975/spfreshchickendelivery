@@ -5,17 +5,27 @@ import { products as staticProducts } from "@/data/products"
 import { supabase } from "@/lib/supabase"
 import { ProductCard } from "@/components/shop/ProductCard"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+
+import { useSearchParams, useRouter } from "next/navigation"
+import { useAuth } from "@/context/AuthContext"
 
 function ShopContent() {
     const searchParams = useSearchParams()
     const category = searchParams.get('cat') || 'all'
     const [products, setProducts] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const { user, isGuest, loading: authLoading } = useAuth()
+    const router = useRouter()
 
     useEffect(() => {
-        fetchProducts()
-    }, [])
+        if (!authLoading && !user && !isGuest) {
+            router.push('/login?redirect=/shop')
+            return
+        }
+        if (!authLoading) {
+            fetchProducts()
+        }
+    }, [authLoading, user, isGuest])
 
     const fetchProducts = async () => {
         try {

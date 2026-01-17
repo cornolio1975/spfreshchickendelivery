@@ -57,13 +57,21 @@ export default function CartPage() {
 
 function CartContent() {
     const { items, removeItem, updateQuantity, total, clearCart } = useCart()
-    const { user, profile } = useAuth()
+    const { user, profile, loading, isGuest } = useAuth()
     const router = useRouter()
     const [address, setAddress] = useState("")
+
     const [suggestions, setSuggestions] = useState<{ address: string, lat: string, lng: string }[]>([])
     const [selectedCoords, setSelectedCoords] = useState<{ lat: string, lng: string } | null>(null)
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false)
+
+    // Auth Guard
+    useEffect(() => {
+        if (!loading && !user && !isGuest) {
+            router.push('/login?redirect=/cart')
+        }
+    }, [loading, user, isGuest])
     const [deliveryFee, setDeliveryFee] = useState<number | null>(null)
     const [isLoadingQuote, setIsLoadingQuote] = useState(false)
     const [quoteError, setQuoteError] = useState("")
@@ -435,7 +443,7 @@ function CartContent() {
 
             // 4. Clear Cart and Redirect
             // 4. Success - In-Page State (No Redirect)
-            const verifyUrl = `https://wa.me/60129092013?text=${encodeURIComponent(`Hi, I'd like to verify my Order #${orderNo}. Total: RM ${finalTotal.toFixed(2)}`)}`
+            const verifyUrl = `https://wa.me/60129092013?text=${encodeURIComponent(message)}`
 
             setOrderSuccess({
                 orderNo,
