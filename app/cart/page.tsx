@@ -547,13 +547,13 @@ function CartContent() {
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Cart Items */}
                     <div className="lg:col-span-2 space-y-4">
-                        {items?.map((item) => (
-                            <div key={`${item.id}-${item.option}`} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex gap-4 items-center">
+                        {items?.map((item, index) => (
+                            <div key={`${item.id}-${item.option || 'default'}-${index}`} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex gap-4 items-center">
                                 <div className="flex-grow">
-                                    <h3 className="font-bold text-slate-900">{item.name}</h3>
+                                    <h3 className="font-bold text-slate-900">{item.name || 'Unknown Item'}</h3>
                                     <p className="text-sm text-slate-500">
                                         {item.option && <span className="mr-2 px-2 py-0.5 bg-slate-100 rounded text-xs font-medium">{item.option}</span>}
-                                        RM {item.price.toFixed(2)} / {item.unit}
+                                        RM {(item.price || 0).toFixed(2)} / {item.unit || 'unit'}
                                     </p>
                                 </div>
 
@@ -562,13 +562,13 @@ function CartContent() {
                                         <button
                                             onClick={() => updateQuantity(item.id, item.quantity - 1, item.option)}
                                             className="p-1 hover:bg-white rounded-md transition-colors"
-                                            disabled={item.quantity <= 1}
+                                            disabled={(item.quantity || 1) <= 1}
                                         >
                                             <Minus className="h-4 w-4 text-slate-600" />
                                         </button>
-                                        <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
+                                        <span className="w-8 text-center font-bold text-sm">{item.quantity || 1}</span>
                                         <button
-                                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.option)}
+                                            onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1, item.option)}
                                             className="p-1 hover:bg-white rounded-md transition-colors"
                                         >
                                             <Plus className="h-4 w-4 text-slate-600" />
