@@ -32,12 +32,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const saved = localStorage.getItem("cart")
             if (saved) {
                 const parsed = JSON.parse(saved)
-                // Sanitize data: Ensure price is a number
-                const sanitized = Array.isArray(parsed) ? parsed.map((item: any) => ({
-                    ...item,
-                    price: typeof item.price === 'string' ? parseFloat(item.price) : Number(item.price || 0),
-                    quantity: Number(item.quantity || 1)
-                })) : []
+                // Sanitize data: Ensure price is a number and item is valid
+                const sanitized = Array.isArray(parsed) ? parsed
+                    .filter((item: any) => item && typeof item === 'object' && item.id) // Filter nulls/invalid items
+                    .map((item: any) => ({
+                        ...item,
+                        price: typeof item.price === 'string' ? parseFloat(item.price) : Number(item.price || 0),
+                        quantity: Number(item.quantity || 1)
+                    })) : []
                 setItems(sanitized)
             }
         } catch (e) {

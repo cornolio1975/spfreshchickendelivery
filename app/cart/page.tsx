@@ -71,7 +71,23 @@ function CartContent() {
         if (!loading && !user && !isGuest) {
             router.push('/login?redirect=/cart')
         }
-    }, [loading, user, isGuest])
+    }, [loading, user, isGuest, router])
+
+    // 1. Loading State: Prevent rendering ANY checks until Auth is ready
+    if (loading) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-500 font-bold text-sm">Loading cart...</p>
+            </div>
+        )
+    }
+
+    // 2. Unauthenticated State: Strict Null Return
+    // This stops the "White Screen" crash on mobile if the item list tries to render with bad data before redirect
+    if (!user && !isGuest) {
+        return null;
+    }
     const [deliveryFee, setDeliveryFee] = useState<number | null>(null)
     const [isLoadingQuote, setIsLoadingQuote] = useState(false)
     const [quoteError, setQuoteError] = useState("")
