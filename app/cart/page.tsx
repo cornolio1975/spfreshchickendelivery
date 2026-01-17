@@ -368,7 +368,7 @@ function CartContent() {
     const handleCheckout = async (e?: React.MouseEvent) => {
         if (e && e.preventDefault) e.preventDefault()
 
-        const isGuest = typeof window !== 'undefined' && localStorage.getItem('guestMode') === 'true'
+        // Use context state directly or safe check
         if (!user && !isGuest) {
             router.push('/login?redirect=/cart')
             return

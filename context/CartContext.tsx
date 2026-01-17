@@ -22,6 +22,19 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
+// Helper for safe storage access (prevents Safari Private Mode crashes)
+const safeLocalStorage = {
+    get: (key: string) => {
+        try { return typeof window !== 'undefined' ? localStorage.getItem(key) : null } catch { return null }
+    },
+    set: (key: string, val: string) => {
+        try { if (typeof window !== 'undefined') localStorage.setItem(key, val) } catch { }
+    },
+    remove: (key: string) => {
+        try { if (typeof window !== 'undefined') localStorage.removeItem(key) } catch { }
+    }
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
     const [items, setItems] = useState<CartItem[]>([])
     const [isLoaded, setIsLoaded] = useState(false)
@@ -29,7 +42,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Load from local storage
     useEffect(() => {
         try {
-            const saved = localStorage.getItem("cart")
+            const saved = safeLocalStorage.get("cart")
             if (saved) {
                 const parsed = JSON.parse(saved)
                 // Sanitize data: Ensure price is a number and item is valid
@@ -52,11 +65,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Save to local storage
     useEffect(() => {
         if (isLoaded) {
-            try {
-                localStorage.setItem("cart", JSON.stringify(items))
-            } catch (e) {
-                console.error("Failed to save cart to localStorage", e)
-            }
+            safeLocalStorage.set("cart", JSON.stringify(items))
         }
     }, [items, isLoaded])
 

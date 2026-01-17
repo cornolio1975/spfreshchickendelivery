@@ -17,6 +17,18 @@ interface AuthContextType {
     updatePassword: (password: string) => Promise<void>
 }
 
+const safeLocalStorage = {
+    get: (key: string) => {
+        try { return typeof window !== 'undefined' ? localStorage.getItem(key) : null } catch { return null }
+    },
+    set: (key: string, val: string) => {
+        try { if (typeof window !== 'undefined') localStorage.setItem(key, val) } catch { }
+    },
+    remove: (key: string) => {
+        try { if (typeof window !== 'undefined') localStorage.removeItem(key) } catch { }
+    }
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -29,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         // Check for guest mode on mount
         if (typeof window !== 'undefined') {
-            setIsGuest(localStorage.getItem('guestMode') === 'true')
+            setIsGuest(safeLocalStorage.get('guestMode') === 'true')
         }
 
         // 1. IMPROVED REDIRECT: Catch password recovery immediately
@@ -49,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // Force clear local storage if token is invalid
                 if (error.message?.includes('Refresh Token Not Found') || error.message?.includes('Invalid Refresh Token')) {
                     console.warn('Corrupt session detected, clearing data...')
-                    localStorage.removeItem('supabase.auth.token') // Manual clear just in case
+                    safeLocalStorage.remove('supabase.auth.token') // Manual clear just in case
                     supabase.auth.signOut()
                 }
                 setUser(null)
@@ -60,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (session?.user) {
                 // If user logged in, clear guest mode
-                localStorage.removeItem('guestMode')
+                safeLocalStorage.remove('guestMode')
                 setIsGuest(false)
                 fetchProfile(session.user.id)
             } else {
@@ -82,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(session?.user ?? null)
             if (session?.user) {
                 // User logged in, clear guest
-                localStorage.removeItem('guestMode')
+                safeLocalStorage.remove('guestMode')
                 setIsGuest(false)
                 fetchProfile(session.user.id)
             } else {
@@ -172,13 +184,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signOut = async () => {
         const { error } = await supabase.auth.signOut()
-        localStorage.removeItem('guestMode')
+        safeLocalStorage.remove('guestMode')
         setIsGuest(false)
         if (error) throw error
     }
 
     const loginAsGuest = () => {
-        localStorage.setItem('guestMode', 'true')
+        safeLocalStorage.set('guestMode', 'true')
         setIsGuest(true)
     }
 

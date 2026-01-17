@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     ],
   },
   // Safari compatibility improvements
-  transpilePackages: ['@lalamove/lalamove-js', 'lucide-react'],
+  transpilePackages: ['@lalamove/lalamove-js'],
   compiler: {
     removeConsole: false,
   },
