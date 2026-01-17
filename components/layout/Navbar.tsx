@@ -89,7 +89,7 @@ export function Navbar() {
                         </div>
                     ) : (
                         <div className="hidden md:flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => loginAsGuest()} className="font-bold text-slate-600 hover:text-primary">
+                            <Button variant="default" size="sm" onClick={() => loginAsGuest()} className="rounded-full shadow-md hover:shadow-lg transition-all">
                                 Continue as Guest
                             </Button>
                             <Link href="/login">

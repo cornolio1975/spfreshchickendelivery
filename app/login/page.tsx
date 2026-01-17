@@ -263,9 +263,8 @@ function LoginContent() {
 
                 <div className="text-center">
                     <Button
-                        variant="outline"
                         size="lg"
-                        className="w-full rounded-full font-bold border-2 hover:bg-slate-50 hover:text-primary transition-colors"
+                        className="w-full rounded-full font-bold shadow-lg shadow-primary/20"
                         onClick={handleGuest}
                     >
                         Continue as Guest
