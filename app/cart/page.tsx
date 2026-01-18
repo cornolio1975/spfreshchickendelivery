@@ -59,6 +59,8 @@ function CartContent() {
     const { items, removeItem, updateQuantity, total, clearCart } = useCart()
     const { user, profile, loading, isGuest } = useAuth()
     const router = useRouter()
+
+    /* -------------------- ALL STATES (TOP ONLY) -------------------- */
     const [address, setAddress] = useState("")
 
     const [suggestions, setSuggestions] = useState<{ address: string, lat: string, lng: string }[]>([])
@@ -66,28 +68,6 @@ function CartContent() {
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false)
 
-    // Auth Guard
-    useEffect(() => {
-        if (!loading && !user && !isGuest) {
-            router.push('/login?redirect=/cart')
-        }
-    }, [loading, user, isGuest, router])
-
-    // 1. Loading State: Prevent rendering ANY checks until Auth is ready
-    if (loading) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
-                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-500 font-bold text-sm">Loading cart...</p>
-            </div>
-        )
-    }
-
-    // 2. Unauthenticated State: Strict Null Return
-    // This stops the "White Screen" crash on mobile if the item list tries to render with bad data before redirect
-    if (!user && !isGuest) {
-        return null;
-    }
     const [deliveryFee, setDeliveryFee] = useState<number | null>(null)
     const [isLoadingQuote, setIsLoadingQuote] = useState(false)
     const [quoteError, setQuoteError] = useState("")
@@ -95,19 +75,9 @@ function CartContent() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [defaultFee, setDefaultFee] = useState(15.00)
 
-    // Multi-shop state
     const [shops, setShops] = useState<Shop[]>([])
     const [selectedShopId, setSelectedShopId] = useState<string>("")
 
-    // Helper to get local date string YYYY-MM-DD
-    const getLocalDateString = (date: Date) => {
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-        return `${year}-${month}-${day}`
-    }
-
-    // Scheduling state
     const [deliveryType, setDeliveryType] = useState<'immediate' | 'scheduled'>('immediate')
     const [scheduledDate, setScheduledDate] = useState<string>("")
     const [scheduledTime, setScheduledTime] = useState<string>("09:00")
@@ -128,54 +98,18 @@ function CartContent() {
         verifyUrl: string
     } | null>(null)
 
-    useEffect(() => {
-        setMounted(true)
-    }, [])
-
-    // Defer Cart Clearing logic
-    useEffect(() => {
-        if (orderSuccess) {
-            // Clear cart ONLY after success state is rendered
-            clearCart()
-        }
-    }, [orderSuccess, clearCart])
-
     const [roomFloorInfo, setRoomFloorInfo] = useState("")
     const [remarks, setRemarks] = useState("")
 
-    useEffect(() => {
-        setMounted(true)
-        // Initialize date on client only to match local time
-        setScheduledDate(getLocalDateString(new Date()))
+    /* -------------------- HELPERS (MOVED UP FOR SAFETY) -------------------- */
 
-        fetchShops()
-        fetchDefaultFee()
-    }, [])
-
-    // Suggestion debounce logic
-    useEffect(() => {
-        const timer = setTimeout(async () => {
-            if (address.length >= 3 && showSuggestions) {
-                setIsSearchingSuggestions(true)
-                try {
-                    // Fetch suggestions from the local API
-                    const res = await fetch(`/api/delivery/suggestions?q=${encodeURIComponent(address)}`)
-                    const data = await res.json()
-                    if (data.suggestions) {
-                        setSuggestions(data.suggestions)
-                    }
-                } catch (err) {
-                    console.error('Error fetching suggestions:', err)
-                } finally {
-                    setIsSearchingSuggestions(false)
-                }
-            } else {
-                setSuggestions([])
-            }
-        }, 500)
-
-        return () => clearTimeout(timer)
-    }, [address, showSuggestions])
+    // Helper to get local date string YYYY-MM-DD
+    const getLocalDateString = (date: Date) => {
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
 
     const fetchDefaultFee = async () => {
         try {
@@ -202,17 +136,6 @@ function CartContent() {
             console.error('Error fetching shops:', err)
         }
     }
-
-    // Effect to pre-fill recipient info when modal opens
-    useEffect(() => {
-        if (showDetailsModal && profile) {
-            if (!recipientName) setRecipientName(profile.full_name || "")
-            if (!recipientPhone) setRecipientPhone(profile.phone || "")
-        }
-    }, [showDetailsModal, profile])
-
-    // Reset delivery fee if address changes significantly (optional, but good for UX)
-    // For now, we keep it simple. User must click "Get Price" again.
 
     const getDeliveryQuote = async () => {
         if (!address.trim()) {
@@ -248,7 +171,7 @@ function CartContent() {
             })
 
             const response = await res.json()
-            setIsUsingDefaultFee(false) // Reset on new attempt
+            setIsUsingDefaultFee(false) // Reset on attempt
 
             if (!res.ok) {
                 console.warn('[Cart] API failed:', response.message)
@@ -296,16 +219,6 @@ function CartContent() {
         return isOpen;
     }
 
-    // Initialize Business State
-    useEffect(() => {
-        const isOpen = checkBusinessHours(true);
-        setIsBusinessOpen(isOpen);
-        if (!isOpen) {
-            setDeliveryType('scheduled');
-        }
-    }, [])
-
-
     const getAvailableDates = () => {
         const dates = []
         for (let i = 0; i < 5; i++) {
@@ -351,17 +264,89 @@ function CartContent() {
         return filteredTimes
     }
 
-    // Auto-select valid time when date changes
+    /* -------------------- EFFECTS -------------------- */
+
+    // Mount check
+    useEffect(() => {
+        setMounted(true)
+        setScheduledDate(getLocalDateString(new Date()))
+        fetchShops()
+        fetchDefaultFee()
+    }, [])
+
+    // Auth Guard
+    useEffect(() => {
+        if (!loading && !user && !isGuest) {
+            router.replace('/login?redirect=/cart')
+        }
+    }, [loading, user, isGuest, router])
+
+    // Clear cart only after success shown
+    useEffect(() => {
+        if (orderSuccess) clearCart()
+    }, [orderSuccess, clearCart])
+
+    // Prefill recipient info
+    useEffect(() => {
+        if (showDetailsModal && profile) {
+            if (!recipientName) setRecipientName(profile.full_name || "")
+            if (!recipientPhone) setRecipientPhone(profile.phone || "")
+        }
+    }, [showDetailsModal, profile])
+
+    // Address suggestion debounce
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (address.length >= 3 && showSuggestions) {
+                setIsSearchingSuggestions(true)
+                try {
+                    const res = await fetch(`/api/delivery/suggestions?q=${encodeURIComponent(address)}`)
+                    const data = await res.json()
+                    if (data.suggestions) setSuggestions(data.suggestions)
+                } catch (err) {
+                    console.error('Suggestion error:', err)
+                } finally {
+                    setIsSearchingSuggestions(false)
+                }
+            } else {
+                setSuggestions([])
+            }
+        }, 500)
+
+        return () => clearTimeout(timer)
+    }, [address, showSuggestions])
+
+    // Business hours init
+    useEffect(() => {
+        const isOpen = checkBusinessHours(true)
+        setIsBusinessOpen(isOpen)
+        if (!isOpen) setDeliveryType('scheduled')
+    }, [])
+
+    // Auto adjust scheduled time
     useEffect(() => {
         if (deliveryType === 'scheduled') {
             const availableTimes = getAvailableTimes()
-            // If currently selected time is not in the available list (or is empty), select the first available one
             const isValid = availableTimes.some(t => t.value === scheduledTime)
             if (!isValid && availableTimes.length > 0) {
                 setScheduledTime(availableTimes[0].value)
             }
         }
     }, [scheduledDate, deliveryType])
+
+    /* -------------------- GUARDS (AFTER HOOKS) -------------------- */
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-500 font-bold text-sm">Loading cart...</p>
+            </div>
+        )
+    }
+
+    if (!user && !isGuest) return null
+    if (!mounted) return null
 
     const finalTotal = total + (deliveryFee || 0)
 
