@@ -274,7 +274,17 @@ function CartContent() {
     // Mount check
     useEffect(() => {
         setMounted(true)
-        setScheduledDate(getLocalDateString(new Date()))
+        // Initialize date on client only to match local time
+        const now = new Date()
+        if (now.getHours() >= 18) {
+            // If past 18:00, default to Tomorrow
+            const tomorrow = new Date(now)
+            tomorrow.setDate(tomorrow.getDate() + 1)
+            setScheduledDate(getLocalDateString(tomorrow))
+        } else {
+            setScheduledDate(getLocalDateString(now))
+        }
+
         fetchShops()
         fetchDefaultFee()
     }, [])
