@@ -221,7 +221,12 @@ function CartContent() {
 
     const getAvailableDates = () => {
         const dates = []
-        for (let i = 0; i < 5; i++) {
+        const now = new Date()
+        // If it's past 18:00 (6:00 PM), "Today" is no longer an option for delivery
+        // Start from Tomorrow (i = 1) if closed for the day
+        const startDay = now.getHours() >= 18 ? 1 : 0
+
+        for (let i = startDay; i < 5 + startDay; i++) {
             const date = new Date()
             date.setDate(date.getDate() + i)
             dates.push({
@@ -771,7 +776,7 @@ function CartContent() {
                                     <span>RM {total.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-slate-600">
-                                    <span>Delivery</span>
+                                    <span>Delivery Fee (Priority)</span>
                                     {deliveryFee !== null ? (
                                         <span className="font-bold text-slate-900">RM {deliveryFee.toFixed(2)}</span>
                                     ) : (

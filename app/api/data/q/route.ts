@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         // MARKUP: Add RM 1.00 to the delivery fee
         if (quotation?.data?.priceBreakdown?.total) {
             const originalPrice = parseFloat(quotation.data.priceBreakdown.total);
-            const markedUpPrice = (originalPrice + 1.00).toFixed(2);
+            const markedUpPrice = (originalPrice + 3.00).toFixed(2);
             quotation.data.priceBreakdown.total = markedUpPrice;
             console.log(`[API Route] Applied markup: ${originalPrice} -> ${markedUpPrice}`);
         }
