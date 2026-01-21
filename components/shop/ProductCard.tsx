@@ -14,7 +14,11 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
     const { addItem } = useCart()
     const [selectedOption, setSelectedOption] = useState(product.options?.[0])
-    const [selectedWeight, setSelectedWeight] = useState(product.weight_options?.[0])
+
+    // Find first available weight option
+    const firstAvailableWeight = product.weight_options?.find(w => !product.unavailable_weights?.includes(w))
+    const [selectedWeight, setSelectedWeight] = useState(firstAvailableWeight || product.weight_options?.[0])
+
     const [skinOption, setSkinOption] = useState("Skinned (dgn Kulit)")
     const [quantity, setQuantity] = useState(1)
     const [isAdded, setIsAdded] = useState(false)
@@ -102,12 +106,17 @@ export function ProductCard({ product }: ProductCardProps) {
                             </label>
                             <select
                                 className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                value={selectedWeight}
+                                value={selectedWeight || ''}
                                 onChange={(e) => setSelectedWeight(parseFloat(e.target.value))}
                             >
-                                {product.weight_options.map(w => (
-                                    <option key={w} value={w}>{w} kg</option>
-                                ))}
+                                {product.weight_options.map(w => {
+                                    const isUnavailable = product.unavailable_weights?.includes(w)
+                                    return (
+                                        <option key={w} value={w} disabled={isUnavailable}>
+                                            {w} kg {isUnavailable ? '(Out of Stock)' : ''}
+                                        </option>
+                                    )
+                                })}
                             </select>
                         </div>
                     )

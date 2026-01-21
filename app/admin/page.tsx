@@ -17,6 +17,8 @@ interface Product {
     image: string
     description?: string
     options?: string[]
+    weight_options?: number[]
+    unavailable_weights?: number[]
     in_stock: boolean
 }
 
@@ -101,6 +103,9 @@ export default function AdminPage() {
     })
     const [optionsList, setOptionsList] = useState<string[]>([])
     const [newOption, setNewOption] = useState('')
+    const [weightOptionsList, setWeightOptionsList] = useState<number[]>([])
+    const [unavailableWeightsList, setUnavailableWeightsList] = useState<number[]>([])
+    const [newWeightOption, setNewWeightOption] = useState('')
 
     // Business settings state
     const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null)
@@ -335,7 +340,10 @@ export default function AdminPage() {
         const productData = {
             name: formData.name, category: formData.category, price: formData.price,
             unit: formData.unit, image: formData.image, description: formData.description,
-            options: optionsList.length > 0 ? optionsList : null, in_stock: formData.in_stock
+            options: optionsList.length > 0 ? optionsList : null,
+            weight_options: weightOptionsList.length > 0 ? weightOptionsList : null,
+            unavailable_weights: unavailableWeightsList.length > 0 ? unavailableWeightsList : null,
+            in_stock: formData.in_stock
         }
         try {
             if (editingProduct) {
@@ -378,14 +386,39 @@ export default function AdminPage() {
     const resetForm = () => {
         setFormData({ name: '', category: 'whole', price: 0, unit: 'kg', image: '', description: '', in_stock: true })
         setOptionsList([]); setNewOption('')
+        setWeightOptionsList([]); setUnavailableWeightsList([]); setNewWeightOption('')
     }
     const startEdit = (product: Product) => {
         setEditingProduct(product)
         setFormData({ ...product, description: product.description || '' })
-        setOptionsList(product.options || []); setShowForm(true)
+        setOptionsList(product.options || [])
+        setWeightOptionsList(product.weight_options || [])
+        setUnavailableWeightsList(product.unavailable_weights || [])
+        setShowForm(true)
     }
     const addOption = () => { if (newOption.trim()) { setOptionsList([...optionsList, newOption.trim()]); setNewOption('') } }
     const removeOption = (index: number) => { setOptionsList(optionsList.filter((_, i) => i !== index)) }
+
+    const addWeightOption = () => {
+        const val = parseFloat(newWeightOption)
+        if (!isNaN(val) && val > 0 && !weightOptionsList.includes(val)) {
+            setWeightOptionsList([...weightOptionsList, val].sort((a, b) => a - b))
+            setNewWeightOption('')
+        }
+    }
+
+    const removeWeightOption = (weight: number) => {
+        setWeightOptionsList(weightOptionsList.filter(w => w !== weight))
+        setUnavailableWeightsList(unavailableWeightsList.filter(w => w !== weight))
+    }
+
+    const toggleWeightAvailability = (weight: number) => {
+        if (unavailableWeightsList.includes(weight)) {
+            setUnavailableWeightsList(unavailableWeightsList.filter(w => w !== weight))
+        } else {
+            setUnavailableWeightsList([...unavailableWeightsList, weight])
+        }
+    }
 
 
     // Reporting Helpers
@@ -631,6 +664,52 @@ export default function AdminPage() {
                                     <div><label className="block text-sm font-bold mb-1">Unit</label><input className="w-full p-2 border rounded-lg" value={formData.unit} onChange={e => setFormData({ ...formData, unit: e.target.value })} /></div>
                                     <div><label className="block text-sm font-bold mb-1">Category</label><input className="w-full p-2 border rounded-lg" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} /></div>
                                     <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Image URL</label><input className="w-full p-2 border rounded-lg" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} /></div>
+
+                                    {/* Size/Weight Management */}
+                                    <div className="md:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                        <label className="block text-sm font-bold mb-2">Size Options (kg)</label>
+                                        <div className="flex gap-2 mb-3">
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                placeholder="e.g. 1.5"
+                                                className="flex-1 p-2 border rounded-lg"
+                                                value={newWeightOption}
+                                                onChange={e => setNewWeightOption(e.target.value)}
+                                                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addWeightOption())}
+                                            />
+                                            <Button type="button" onClick={addWeightOption} size="sm"><Plus className="h-4 w-4" /></Button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {weightOptionsList.map((weight) => {
+                                                const isUnavailable = unavailableWeightsList.includes(weight)
+                                                return (
+                                                    <div key={weight} className={`flex items-center gap-2 pl-3 pr-1 py-1 rounded-full border ${isUnavailable ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
+                                                        <span className={`text-sm font-bold ${isUnavailable ? 'text-red-700 line-through' : 'text-slate-700'}`}>{weight} kg</span>
+                                                        <div className="flex items-center border-l pl-1 ml-1 border-slate-200">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleWeightAvailability(weight)}
+                                                                className={`p-1 rounded-full hover:bg-slate-200 ${isUnavailable ? 'text-green-600' : 'text-slate-400'}`}
+                                                                title={isUnavailable ? "Mark as Available" : "Mark as Unavailable"}
+                                                            >
+                                                                {isUnavailable ? <CheckCircle className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeWeightOption(weight)}
+                                                                className="p-1 text-red-400 hover:text-red-600 rounded-full hover:bg-red-50"
+                                                            >
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                        {weightOptionsList.length > 0 && <p className="text-[10px] text-slate-400 mt-2">* Click the cross/check icon to toggle availability.</p>}
+                                    </div>
+
                                     <div className="md:col-span-2">
                                         <label className="flex items-center gap-2 cursor-pointer bg-slate-50 p-3 rounded-lg border border-slate-200">
                                             <input
@@ -639,7 +718,7 @@ export default function AdminPage() {
                                                 checked={formData.in_stock}
                                                 onChange={e => setFormData({ ...formData, in_stock: e.target.checked })}
                                             />
-                                            <span className="font-bold text-slate-700">Available In Stock</span>
+                                            <span className="font-bold text-slate-700">Available In Stock (Whole Product)</span>
                                         </label>
                                     </div>
                                     <div className="md:col-span-2 flex gap-4 mt-4">
