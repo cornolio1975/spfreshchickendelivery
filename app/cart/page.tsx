@@ -130,7 +130,12 @@ function CartContent() {
 
             if (data && data.length > 0) {
                 setShops(data)
-                setSelectedShopId(data[0].id) // Default to first shop
+
+                // Try to respect previously selected shop
+                const savedId = typeof window !== 'undefined' ? localStorage.getItem('sp_selected_shop_id') : null
+                const found = savedId ? data.find((s: any) => s.id === savedId) : null
+
+                setSelectedShopId(found ? found.id : data[0].id)
             }
         } catch (err) {
             console.error('Error fetching shops:', err)

@@ -11,6 +11,8 @@ import { products } from "@/data/products"
 import { ProductCard } from "@/components/shop/ProductCard"
 import { useState } from "react"
 
+import { ShopLocatorSection } from "@/components/home/ShopLocatorSection"
+
 export default function Home() {
   const { user, isGuest } = useAuth()
   const [settings, setSettings] = useState<any>(null)
@@ -108,11 +110,7 @@ export default function Home() {
 
               <div className="flex flex-wrap gap-4 pt-4">
                 <Button size="lg" className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-black text-lg px-8 rounded-full shadow-lg" onClick={() => {
-                  if (user || isGuest) {
-                    window.location.href = "/shop"
-                  } else {
-                    window.location.href = "/login?redirect=/shop"
-                  }
+                  document.getElementById('locations')?.scrollIntoView({ behavior: 'smooth' })
                 }}>
                   Shop Now
                 </Button>
@@ -178,6 +176,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Shop Locator Section */}
+      <ShopLocatorSection />
 
       {/* Categories */}
       <section className="py-16 bg-white">

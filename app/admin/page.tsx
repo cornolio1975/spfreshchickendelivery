@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Plus, Edit, Trash2, Package, X, Settings, Store, ShoppingCart, FileText, Printer, CheckCircle, Clock, Users } from 'lucide-react'
+import { Plus, Edit, Trash2, Package, X, Settings, Store, ShoppingCart, FileText, Printer, CheckCircle, Clock, Users, List, Archive } from 'lucide-react'
 import Link from "next/link"
 
 interface Product {
@@ -82,6 +82,14 @@ interface Customer {
     created_at: string
 }
 
+const CATEGORIES = [
+    { id: 'whole', label: 'Whole Chicken' },
+    { id: 'parts', label: 'Chicken Parts' },
+    { id: 'mutton', label: 'Fresh Mutton' },
+    { id: 'eggs', label: 'Fresh Eggs' },
+    { id: 'frozen', label: 'Frozen Goods' }
+]
+
 export default function AdminPage() {
     const { user, profile, loading: authLoading } = useAuth()
     const router = useRouter()
@@ -141,6 +149,11 @@ export default function AdminPage() {
         lng: '',
         status: 'open'
     })
+
+    // Shop Product Availability State
+    const [managingShopProducts, setManagingShopProducts] = useState<Shop | null>(null)
+    const [shopProductAvailability, setShopProductAvailability] = useState<Record<string, boolean>>({})
+    const [loadingShopProducts, setLoadingShopProducts] = useState(false)
 
     // Orders State
     const [orders, setOrders] = useState<Order[]>([])
@@ -421,6 +434,61 @@ export default function AdminPage() {
     }
 
 
+    // --- Shop Product Availability Handlers ---
+    const fetchShopProducts = async (shopId: string) => {
+        setLoadingShopProducts(true)
+        setShopProductAvailability({})
+        try {
+            const { data, error } = await supabase
+                .from('shop_products')
+                .select('product_id, is_available')
+                .eq('shop_id', shopId)
+
+            if (error) throw error
+
+            const availability: Record<string, boolean> = {}
+            data?.forEach((item: any) => {
+                availability[item.product_id] = item.is_available
+            })
+            setShopProductAvailability(availability)
+        } catch (error: any) {
+            console.error('Error fetching shop products:', error)
+            alert('Error fetching shop products: ' + error.message)
+        } finally {
+            setLoadingShopProducts(false)
+        }
+    }
+
+    const handleManageShopProducts = (shop: Shop) => {
+        setManagingShopProducts(shop)
+        fetchShopProducts(shop.id)
+    }
+
+    const toggleShopProduct = async (productId: string) => {
+        if (!managingShopProducts) return
+
+        const currentStatus = shopProductAvailability[productId] ?? true // Default true
+        const newStatus = !currentStatus
+
+        // Optimistic update
+        setShopProductAvailability(prev => ({ ...prev, [productId]: newStatus }))
+
+        try {
+            const { error } = await supabase
+                .from('shop_products')
+                .upsert(
+                    { shop_id: managingShopProducts.id, product_id: productId, is_available: newStatus },
+                    { onConflict: 'shop_id, product_id' }
+                )
+            if (error) throw error
+        } catch (error: any) {
+            alert('Error updating: ' + error.message)
+            // Revert
+            setShopProductAvailability(prev => ({ ...prev, [productId]: currentStatus }))
+        }
+    }
+
+
     // Reporting Helpers
     const getSalesData = () => {
         const today = new Date().toDateString()
@@ -662,7 +730,18 @@ export default function AdminPage() {
                                         setFormData({ ...formData, price: val === '' ? 0 : parseFloat(val) });
                                     }} /></div>
                                     <div><label className="block text-sm font-bold mb-1">Unit</label><input className="w-full p-2 border rounded-lg" value={formData.unit} onChange={e => setFormData({ ...formData, unit: e.target.value })} /></div>
-                                    <div><label className="block text-sm font-bold mb-1">Category</label><input className="w-full p-2 border rounded-lg" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} /></div>
+                                    <div>
+                                        <label className="block text-sm font-bold mb-1">Category</label>
+                                        <select
+                                            className="w-full p-2 border rounded-lg"
+                                            value={formData.category}
+                                            onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                        >
+                                            {CATEGORIES.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Image URL</label><input className="w-full p-2 border rounded-lg" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} /></div>
 
                                     {/* Size/Weight Management */}
@@ -867,6 +946,14 @@ export default function AdminPage() {
                                         </div>
                                     </div>
                                     <div className="mt-4 pt-4 border-t border-slate-50 flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 text-xs font-bold text-slate-700 border-slate-200 bg-slate-50 hover:bg-white"
+                                            onClick={() => handleManageShopProducts(shop)}
+                                        >
+                                            <Archive className="h-3 w-3 mr-1 text-primary" /> Products
+                                        </Button>
                                         <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-slate-600" onClick={() => { setEditingShop(shop); setShopForm({ name: shop.name, address: shop.address, lat: shop.lat, lng: shop.lng, status: shop.status }); setShowShopForm(true) }}>
                                             <Edit className="h-3 w-3 mr-1" /> Edit
                                         </Button>
@@ -877,6 +964,68 @@ export default function AdminPage() {
                                 </div>
                             ))}
                         </div>
+
+
+                        {/* Modal for Managing Shop Products */}
+                        {managingShopProducts && (
+                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
+                                <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
+                                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                        <div>
+                                            <h2 className="text-xl font-black text-slate-900">Manage Availability</h2>
+                                            <p className="text-slate-500 text-sm">for {managingShopProducts.name}</p>
+                                        </div>
+                                        <button onClick={() => setManagingShopProducts(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                                            <X className="h-6 w-6 text-slate-500" />
+                                        </button>
+                                    </div>
+
+                                    <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                                        {loadingShopProducts ? (
+                                            <div className="text-center py-20 text-slate-400">Loading product availability...</div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between items-center text-sm text-slate-500 px-2 pb-2 border-b border-slate-100">
+                                                    <span>Product Name</span>
+                                                    <span>Availability</span>
+                                                </div>
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {products.map(product => {
+                                                        const isAvailable = shopProductAvailability[product.id] ?? true // Default true
+                                                        return (
+                                                            <div key={product.id}
+                                                                className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer select-none group ${isAvailable ? 'bg-white border-slate-200 hover:border-primary/50 shadow-sm' : 'bg-slate-50 border-slate-200 opacity-60 grayscale-[0.5]'
+                                                                    }`}
+                                                                onClick={() => toggleShopProduct(product.id)}
+                                                            >
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-colors shadow-sm ${isAvailable ? 'bg-green-500 border-green-600 text-white' : 'bg-white border-slate-300'
+                                                                        }`}>
+                                                                        {isAvailable ? <CheckCircle className="h-6 w-6" /> : <X className="h-5 w-5 text-slate-300" />}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className={`font-bold text-base transition-colors ${isAvailable ? 'text-slate-900 group-hover:text-primary' : 'text-slate-500'}`}>{product.name}</div>
+                                                                        <div className="text-xs text-slate-500">{product.category} • RM {product.price.toFixed(2)}</div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className={`text-sm font-black px-3 py-1 rounded-full ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
+                                                                    {isAvailable ? 'Available' : 'Hidden'}
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="p-6 border-t border-slate-100 bg-slate-50 text-right flex justify-between items-center">
+                                        <span className="text-xs text-slate-400 font-medium">Changes save automatically</span>
+                                        <Button onClick={() => setManagingShopProducts(null)} size="lg" className="rounded-full px-8">Done</Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -926,6 +1075,6 @@ export default function AdminPage() {
                 )}
 
             </div>
-        </div>
+        </div >
     )
 }
