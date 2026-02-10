@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   title: "SP Fresh Chicken Supplier | Fresh & Wholesale Poultry",
   description: "Order fresh chicken, eggs, and poultry online. Wholesale prices, daily delivery via Lalamove. Halal & Hygienic.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
