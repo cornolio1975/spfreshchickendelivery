@@ -1037,7 +1037,7 @@ export default function AdminPage() {
                                         >
                                             <Archive className="h-3 w-3 mr-1 text-primary" /> Products
                                         </Button>
-                                        <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-slate-600" onClick={() => { setEditingShop(shop); setShopForm({ name: shop.name, address: shop.address, lat: shop.lat, lng: shop.lng, status: shop.status }); setShowShopForm(true) }}>
+                                        <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-slate-600" onClick={() => { setEditingShop(shop); setShopForm({ name: shop.name, address: shop.address, lat: shop.lat, lng: shop.lng, status: shop.status, skin_choice_preference: shop.skin_choice_preference || 'both' }); setShowShopForm(true) }}>
                                             <Edit className="h-3 w-3 mr-1" /> Edit
                                         </Button>
                                         <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-red-400 hover:text-red-600 ml-auto" onClick={() => handleDeleteShop(shop.id)}>
