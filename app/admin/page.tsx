@@ -47,6 +47,7 @@ interface Shop {
     lat: string
     lng: string
     status: 'open' | 'closed' | 'hidden'
+    skin_choice_preference?: 'both' | 'skinned' | 'skinless'
 }
 
 // New Interfaces for Orders
@@ -131,7 +132,7 @@ export default function AdminPage() {
         facebook_url: string
         instagram_url: string
         default_delivery_fee: number
-        skin_choice_preference: 'both' | 'skinned' | 'skinless'
+        skin_choice_preference?: 'both' | 'skinned' | 'skinless'
     }>({
         business_name: '',
         tagline: '',
@@ -145,7 +146,7 @@ export default function AdminPage() {
         facebook_url: '',
         instagram_url: '',
         default_delivery_fee: 15.00,
-        skin_choice_preference: 'both'
+        // skin_choice_preference removed from global settings
     })
 
     // Shops state
@@ -158,12 +159,14 @@ export default function AdminPage() {
         lat: string
         lng: string
         status: 'open' | 'closed' | 'hidden'
+        skin_choice_preference: 'both' | 'skinned' | 'skinless'
     }>({
         name: '',
         address: '',
         lat: '',
         lng: '',
-        status: 'open'
+        status: 'open',
+        skin_choice_preference: 'both'
     })
 
     // Shop Product Availability State
@@ -242,7 +245,6 @@ export default function AdminPage() {
                     facebook_url: data.facebook_url || '',
                     instagram_url: data.instagram_url || '',
                     default_delivery_fee: data.default_delivery_fee || 15.00,
-                    skin_choice_preference: data.skin_choice_preference || 'both'
                 })
             }
         } catch (error) {
@@ -327,7 +329,7 @@ export default function AdminPage() {
                 const { error } = await supabase.from('shops').insert([shopForm])
                 if (error) throw error
             }
-            setShowShopForm(false); setEditingShop(null); setShopForm({ name: '', address: '', lat: '', lng: '', status: 'open' }); fetchShops()
+            setShowShopForm(false); setEditingShop(null); setShopForm({ name: '', address: '', lat: '', lng: '', status: 'open', skin_choice_preference: 'both' }); fetchShops()
         } catch (error: any) { alert('Error: ' + error.message) }
     }
 
@@ -900,46 +902,14 @@ export default function AdminPage() {
                                             <span className="font-bold">Both Available</span>
                                         </label>
 
-                                        <label className={`
-                                            flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all
-                                            ${settingsForm.skin_choice_preference === 'skinned'
-                                                ? 'bg-white border-primary text-primary shadow-sm'
-                                                : 'bg-white border-transparent hover:bg-slate-100 text-slate-600'}
-                                        `}>
-                                            <input
-                                                type="radio"
-                                                name="skin_pref"
-                                                className="hidden"
-                                                checked={settingsForm.skin_choice_preference === 'skinned'}
-                                                onChange={() => setSettingsForm({ ...settingsForm, skin_choice_preference: 'skinned' })}
-                                            />
-                                            <span className="font-bold">Skinned Only</span>
-                                        </label>
-
-                                        <label className={`
-                                            flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all
-                                            ${settingsForm.skin_choice_preference === 'skinless'
-                                                ? 'bg-white border-primary text-primary shadow-sm'
-                                                : 'bg-white border-transparent hover:bg-slate-100 text-slate-600'}
-                                        `}>
-                                            <input
-                                                type="radio"
-                                                name="skin_pref"
-                                                className="hidden"
-                                                checked={settingsForm.skin_choice_preference === 'skinless'}
-                                                onChange={() => setSettingsForm({ ...settingsForm, skin_choice_preference: 'skinless' })}
-                                            />
-                                            <span className="font-bold">Skinless Only</span>
-                                        </label>
+                                        <p className="text-xs text-slate-400 mt-2">
+                                            Note: Skin/Cut availability is now configured per-shop in the Shops tab.
+                                        </p>
                                     </div>
-                                    <p className="text-xs text-slate-400 mt-2">
-                                        Controls whether customers can choose skin options for chicken products.
-                                        "Both Available" allows selection. "Skinned/Skinless Only" locks the choice.
-                                    </p>
                                 </div>
-                            </div>
 
-                            <Button type="submit" size="lg" className="rounded-full">Save Settings</Button>
+                                <Button type="submit" size="lg" className="rounded-full">Save Settings</Button>
+                            </div>
                         </form>
                     </div>
                 )}
@@ -959,7 +929,7 @@ export default function AdminPage() {
                                     </button>
                                 ))}
                             </div>
-                            <Button onClick={() => { setShowShopForm(!showShopForm); setEditingShop(null); setShopForm({ name: '', address: '', lat: '', lng: '', status: 'open' }); }} className="rounded-full">
+                            <Button onClick={() => { setShowShopForm(!showShopForm); setEditingShop(null); setShopForm({ name: '', address: '', lat: '', lng: '', status: 'open', skin_choice_preference: 'both' }); }} className="rounded-full">
                                 <Plus className="mr-2 h-4 w-4" />
                                 Add Shop
                             </Button>
@@ -988,7 +958,32 @@ export default function AdminPage() {
                                             </button>
                                         ))}
                                     </div>
-                                    <Button type="submit">Save Shop</Button>
+
+                                    {/* Skin Preference Control in Shop Form */}
+                                    <div className="mt-4 border-t pt-4">
+                                        <label className="block text-xs font-bold text-slate-700 mb-2">Skin Option Availability</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {([
+                                                { val: 'both', label: 'Both' },
+                                                { val: 'skinned', label: 'Skinned Only' },
+                                                { val: 'skinless', label: 'Skinless Only' }
+                                            ] as const).map(opt => (
+                                                <button
+                                                    key={opt.val}
+                                                    type="button"
+                                                    onClick={() => setShopForm({ ...shopForm, skin_choice_preference: opt.val })}
+                                                    className={`py-2 px-1 rounded-lg text-[10px] font-bold uppercase transition-all border ${shopForm.skin_choice_preference === opt.val
+                                                        ? 'bg-blue-50 border-primary text-primary'
+                                                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                                        }`}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <Button type="submit" className="mt-4 w-full">Save Shop</Button>
                                 </form>
                             </div>
                         )}
@@ -999,6 +994,14 @@ export default function AdminPage() {
                                         <div>
                                             <div className="font-bold flex items-center gap-2">
                                                 {shop.name}
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${shop.skin_choice_preference === 'skinned' ? 'bg-orange-100 text-orange-700' :
+                                                    shop.skin_choice_preference === 'skinless' ? 'bg-pink-100 text-pink-700' :
+                                                        'bg-blue-50 text-blue-700'
+                                                    }`}>
+                                                    {shop.skin_choice_preference === 'skinned' ? 'Skin' : shop.skin_choice_preference === 'skinless' ? 'No Skin' : 'Both'}
+                                                </span>
+                                            </div>
+                                            <div className="mt-1">
                                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase ${shop.status === 'open' ? 'bg-green-100 text-green-600' :
                                                     shop.status === 'closed' ? 'bg-red-100 text-red-600' :
                                                         'bg-slate-200 text-slate-600'
@@ -1006,7 +1009,7 @@ export default function AdminPage() {
                                                     {shop.status}
                                                 </span>
                                             </div>
-                                            <div className="text-sm text-slate-500">{shop.address}</div>
+                                            <div className="text-sm text-slate-500 mt-1">{shop.address}</div>
                                         </div>
                                         <div className="flex flex-col gap-1">
                                             {(['open', 'closed', 'hidden'] as const).map(s => (

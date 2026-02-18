@@ -38,7 +38,7 @@ function ShopContent() {
 
     const fetchShops = async () => {
         try {
-            const { data } = await supabase.from('shops').select('*').eq('status', 'open').order('name')
+            const { data } = await supabase.from('shops').select('*, skin_choice_preference').eq('status', 'open').order('name')
             if (data && data.length > 0) {
                 setShops(data)
 
@@ -217,7 +217,7 @@ function ShopContent() {
             <div className="container mx-auto px-4 py-8">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {filteredProducts.map((product) => (
-                        <ProductCard key={product.id} product={product} skinPreference={settings?.skin_choice_preference} />
+                        <ProductCard key={product.id} product={product} skinPreference={selectedShop?.skin_choice_preference || 'both'} />
                     ))}
                 </div>
 
