@@ -13,6 +13,7 @@ function ShopContent() {
     const searchParams = useSearchParams()
     const category = searchParams.get('cat') || 'all'
     const [products, setProducts] = useState<any[]>([])
+    const [settings, setSettings] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const { user, isGuest, loading: authLoading } = useAuth()
     const router = useRouter()
@@ -31,6 +32,7 @@ function ShopContent() {
         if (!authLoading) {
             fetchShops()
             fetchProducts()
+            fetchSettings()
         }
     }, [authLoading, user, isGuest])
 
@@ -77,6 +79,15 @@ function ShopContent() {
             setProducts(staticProducts)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const fetchSettings = async () => {
+        try {
+            const { data } = await supabase.from('business_settings').select('*').maybeSingle()
+            setSettings(data)
+        } catch (e) {
+            console.error("Error fetching settings", e)
         }
     }
 
@@ -206,7 +217,7 @@ function ShopContent() {
             <div className="container mx-auto px-4 py-8">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {filteredProducts.map((product) => (
-                        <ProductCard key={product.id} product={product} />
+                        <ProductCard key={product.id} product={product} skinPreference={settings?.skin_choice_preference} />
                     ))}
                 </div>
 

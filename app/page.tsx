@@ -186,7 +186,7 @@ export default function Home() {
           <h2 className="text-3xl font-black text-center mb-12 tracking-tight text-slate-900">Our Fresh Selection</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {dbProducts.map((product: any) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} skinPreference={settings?.skin_choice_preference} />
             ))}
           </div>
         </div>

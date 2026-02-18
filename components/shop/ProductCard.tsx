@@ -4,14 +4,15 @@ import { Product } from "@/data/products"
 import { useCart } from "@/context/CartContext"
 import { Button } from "@/components/ui/button"
 import { Plus, Check } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 
 interface ProductCardProps {
     product: Product
+    skinPreference?: 'both' | 'skinned' | 'skinless'
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, skinPreference }: ProductCardProps) {
     const { addItem } = useCart()
     const [selectedOption, setSelectedOption] = useState(product.options?.[0])
 
@@ -22,6 +23,17 @@ export function ProductCard({ product }: ProductCardProps) {
     const [skinOption, setSkinOption] = useState("Skinned (dgn Kulit)")
     const [quantity, setQuantity] = useState(1)
     const [isAdded, setIsAdded] = useState(false)
+
+    // Update skin option based on preference
+    // If preference changes to specific type, force that type
+    // If 'both', default to Skinned (or keep current if valid?) - keeping simple for now
+    useEffect(() => {
+        if (skinPreference === 'skinned') {
+            setSkinOption("Skinned (dgn Kulit)")
+        } else if (skinPreference === 'skinless') {
+            setSkinOption("Skinless (buang Kulit)")
+        }
+    }, [skinPreference])
 
     // Calculate dynamic price based on weight if available
     const unitPrice = selectedWeight ? product.price * selectedWeight : product.price
@@ -122,8 +134,8 @@ export function ProductCard({ product }: ProductCardProps) {
                     )
                 }
 
-                {/* Skin Option Selector - Only for non-egg/frozen items */}
-                {product.category !== 'eggs' && product.category !== 'frozen' && (
+                {/* Skin Option Selector - Only for non-egg/frozen items AND if preference allows choice */}
+                {product.category !== 'eggs' && product.category !== 'frozen' && (skinPreference === 'both' || !skinPreference) && (
                     <div className="mb-3">
                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
                             Skin Preference

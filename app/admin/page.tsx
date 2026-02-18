@@ -35,8 +35,9 @@ interface BusinessSettings {
     whatsapp: string
     operating_hours: Record<string, string>
     facebook_url?: string
-    instagram_url?: string
+    instagram_url: string
     default_delivery_fee: number
+    skin_choice_preference?: 'both' | 'skinned' | 'skinless'
 }
 
 interface Shop {
@@ -117,7 +118,21 @@ export default function AdminPage() {
 
     // Business settings state
     const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null)
-    const [settingsForm, setSettingsForm] = useState({
+    const [settingsForm, setSettingsForm] = useState<{
+        business_name: string
+        tagline: string
+        description: string
+        phone: string
+        email: string
+        address: string
+        lat: string
+        lng: string
+        whatsapp: string
+        facebook_url: string
+        instagram_url: string
+        default_delivery_fee: number
+        skin_choice_preference: 'both' | 'skinned' | 'skinless'
+    }>({
         business_name: '',
         tagline: '',
         description: '',
@@ -129,7 +144,8 @@ export default function AdminPage() {
         whatsapp: '',
         facebook_url: '',
         instagram_url: '',
-        default_delivery_fee: 15.00
+        default_delivery_fee: 15.00,
+        skin_choice_preference: 'both'
     })
 
     // Shops state
@@ -225,7 +241,8 @@ export default function AdminPage() {
                     whatsapp: data.whatsapp || '',
                     facebook_url: data.facebook_url || '',
                     instagram_url: data.instagram_url || '',
-                    default_delivery_fee: data.default_delivery_fee || 15.00
+                    default_delivery_fee: data.default_delivery_fee || 15.00,
+                    skin_choice_preference: data.skin_choice_preference || 'both'
                 })
             }
         } catch (error) {
@@ -859,6 +876,69 @@ export default function AdminPage() {
                                 />
                                 <p className="text-[10px] text-slate-400 mt-1 italic">* This fee will be used if Lalamove cannot calculate a price.</p>
                             </div>
+
+                            {/* Added Skin Options Control */}
+                            <div className="pt-4 border-t border-slate-100 mt-4">
+                                <h3 className="text-lg font-bold text-slate-900 mb-4">Product Configuration</h3>
+
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <label className="block text-sm font-bold text-slate-700 mb-3">Skin Option Availability (Chicken)</label>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <label className={`
+                                            flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all
+                                            ${settingsForm.skin_choice_preference === 'both'
+                                                ? 'bg-white border-primary text-primary shadow-sm'
+                                                : 'bg-white border-transparent hover:bg-slate-100 text-slate-600'}
+                                        `}>
+                                            <input
+                                                type="radio"
+                                                name="skin_pref"
+                                                className="hidden"
+                                                checked={settingsForm.skin_choice_preference === 'both'}
+                                                onChange={() => setSettingsForm({ ...settingsForm, skin_choice_preference: 'both' })}
+                                            />
+                                            <span className="font-bold">Both Available</span>
+                                        </label>
+
+                                        <label className={`
+                                            flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all
+                                            ${settingsForm.skin_choice_preference === 'skinned'
+                                                ? 'bg-white border-primary text-primary shadow-sm'
+                                                : 'bg-white border-transparent hover:bg-slate-100 text-slate-600'}
+                                        `}>
+                                            <input
+                                                type="radio"
+                                                name="skin_pref"
+                                                className="hidden"
+                                                checked={settingsForm.skin_choice_preference === 'skinned'}
+                                                onChange={() => setSettingsForm({ ...settingsForm, skin_choice_preference: 'skinned' })}
+                                            />
+                                            <span className="font-bold">Skinned Only</span>
+                                        </label>
+
+                                        <label className={`
+                                            flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all
+                                            ${settingsForm.skin_choice_preference === 'skinless'
+                                                ? 'bg-white border-primary text-primary shadow-sm'
+                                                : 'bg-white border-transparent hover:bg-slate-100 text-slate-600'}
+                                        `}>
+                                            <input
+                                                type="radio"
+                                                name="skin_pref"
+                                                className="hidden"
+                                                checked={settingsForm.skin_choice_preference === 'skinless'}
+                                                onChange={() => setSettingsForm({ ...settingsForm, skin_choice_preference: 'skinless' })}
+                                            />
+                                            <span className="font-bold">Skinless Only</span>
+                                        </label>
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-2">
+                                        Controls whether customers can choose skin options for chicken products.
+                                        "Both Available" allows selection. "Skinned/Skinless Only" locks the choice.
+                                    </p>
+                                </div>
+                            </div>
+
                             <Button type="submit" size="lg" className="rounded-full">Save Settings</Button>
                         </form>
                     </div>
