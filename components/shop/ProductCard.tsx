@@ -9,12 +9,18 @@ import Image from "next/image"
 
 interface ProductCardProps {
     product: Product
-    skinPreference?: 'both' | 'skinned' | 'skinless'
+    skinPreference?: 'both' | 'skinned' | 'skinless' | 'hidden'
 }
 
 export function ProductCard({ product, skinPreference }: ProductCardProps) {
     const { addItem } = useCart()
     const [selectedOption, setSelectedOption] = useState(product.options?.[0])
+
+    // Price Variants State
+    const hasPriceVariants = product.price_variants && product.price_variants.length > 0
+    const [selectedPriceVariant, setSelectedPriceVariant] = useState<{ name: string, price: number } | null>(
+        hasPriceVariants ? product.price_variants![0] : null
+    )
 
     // Find first available weight option
     const firstAvailableWeight = product.weight_options?.find(w => !product.unavailable_weights?.includes(w))
@@ -35,8 +41,9 @@ export function ProductCard({ product, skinPreference }: ProductCardProps) {
         }
     }, [skinPreference])
 
-    // Calculate dynamic price based on weight if available
-    const unitPrice = selectedWeight ? product.price * selectedWeight : product.price
+    // Calculate dynamic price based on price variant first, then weight if available
+    const basePrice = selectedPriceVariant ? selectedPriceVariant.price : product.price
+    const unitPrice = selectedWeight ? basePrice * selectedWeight : basePrice
     const finalPrice = unitPrice * quantity
     const finalUnit = selectedWeight ? `kg` : product.unit
 
@@ -46,6 +53,11 @@ export function ProductCard({ product, skinPreference }: ProductCardProps) {
         // Add skin option if applicable (chicken products)
         if (product.category !== 'eggs' && product.category !== 'frozen') {
             finalOption += `${skinOption}`
+        }
+
+        // Add price variant option
+        if (selectedPriceVariant) {
+            finalOption += finalOption ? `, ${selectedPriceVariant.name}` : selectedPriceVariant.name
         }
 
         // Add prep option
@@ -134,8 +146,8 @@ export function ProductCard({ product, skinPreference }: ProductCardProps) {
                     )
                 }
 
-                {/* Skin Option Selector - Only for non-egg/frozen items AND if preference allows choice */}
-                {product.category !== 'eggs' && product.category !== 'frozen' && (skinPreference === 'both' || !skinPreference) && (
+                {/* Skin Option Selector - Only for non-egg/frozen items AND if preference allows choice AND is not hidden */}
+                {product.category !== 'eggs' && product.category !== 'frozen' && skinPreference !== 'hidden' && (skinPreference === 'both' || !skinPreference) && (
                     <div className="mb-3">
                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
                             Skin Preference
@@ -156,7 +168,7 @@ export function ProductCard({ product, skinPreference }: ProductCardProps) {
                     product.options && (
                         <div className="mb-4">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
-                                Preparation
+                                Preparation Option
                             </label>
                             <select
                                 className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -165,6 +177,31 @@ export function ProductCard({ product, skinPreference }: ProductCardProps) {
                             >
                                 {product.options.map(opt => (
                                     <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )
+                }
+
+                {/* Price Variants Selector */}
+                {
+                    hasPriceVariants && product.price_variants && (
+                        <div className="mb-4">
+                            <label className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1.5 block">
+                                Variant Type
+                            </label>
+                            <select
+                                className="w-full p-2 bg-blue-50/50 border border-blue-200 rounded-lg text-sm font-bold text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                value={selectedPriceVariant?.name || ''}
+                                onChange={(e) => {
+                                    const variant = product.price_variants!.find(v => v.name === e.target.value)
+                                    if (variant) setSelectedPriceVariant(variant)
+                                }}
+                            >
+                                {product.price_variants.map(variant => (
+                                    <option key={variant.name} value={variant.name}>
+                                        {variant.name} (+RM {variant.price.toFixed(2)})
+                                    </option>
                                 ))}
                             </select>
                         </div>

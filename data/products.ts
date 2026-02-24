@@ -9,6 +9,7 @@ export interface Product {
     options?: string[]; // e.g. cuts
     weight_options?: number[]; // e.g. [1.5, 2.0]
     unavailable_weights?: number[]; // e.g. [2.0]
+    price_variants?: { name: string, price: number }[]; // e.g. [{name: "Local", price: 35.00}]
     in_stock?: boolean; // Default true
 }
 

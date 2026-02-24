@@ -19,6 +19,7 @@ interface Product {
     options?: string[]
     weight_options?: number[]
     unavailable_weights?: number[]
+    price_variants?: { name: string, price: number }[]
     in_stock: boolean
 }
 
@@ -37,7 +38,7 @@ interface BusinessSettings {
     facebook_url?: string
     instagram_url: string
     default_delivery_fee: number
-    skin_choice_preference?: 'both' | 'skinned' | 'skinless'
+    skin_choice_preference?: 'both' | 'skinned' | 'skinless' | 'hidden'
 }
 
 interface Shop {
@@ -47,7 +48,7 @@ interface Shop {
     lat: string
     lng: string
     status: 'open' | 'closed' | 'hidden'
-    skin_choice_preference?: 'both' | 'skinned' | 'skinless'
+    skin_choice_preference?: 'both' | 'skinned' | 'skinless' | 'hidden'
 }
 
 // New Interfaces for Orders
@@ -117,6 +118,10 @@ export default function AdminPage() {
     const [unavailableWeightsList, setUnavailableWeightsList] = useState<number[]>([])
     const [newWeightOption, setNewWeightOption] = useState('')
 
+    const [priceVariantsList, setPriceVariantsList] = useState<{ name: string, price: number }[]>([])
+    const [newVariantName, setNewVariantName] = useState('')
+    const [newVariantPrice, setNewVariantPrice] = useState('')
+
     // Business settings state
     const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null)
     const [settingsForm, setSettingsForm] = useState<{
@@ -132,7 +137,7 @@ export default function AdminPage() {
         facebook_url: string
         instagram_url: string
         default_delivery_fee: number
-        skin_choice_preference?: 'both' | 'skinned' | 'skinless'
+        skin_choice_preference?: 'both' | 'skinned' | 'skinless' | 'hidden'
     }>({
         business_name: '',
         tagline: '',
@@ -159,7 +164,7 @@ export default function AdminPage() {
         lat: string
         lng: string
         status: 'open' | 'closed' | 'hidden'
-        skin_choice_preference: 'both' | 'skinned' | 'skinless'
+        skin_choice_preference: 'both' | 'skinned' | 'skinless' | 'hidden'
     }>({
         name: '',
         address: '',
@@ -375,6 +380,7 @@ export default function AdminPage() {
             options: optionsList.length > 0 ? optionsList : null,
             weight_options: weightOptionsList.length > 0 ? weightOptionsList : null,
             unavailable_weights: unavailableWeightsList.length > 0 ? unavailableWeightsList : null,
+            price_variants: priceVariantsList.length > 0 ? priceVariantsList : null,
             in_stock: formData.in_stock
         }
         try {
@@ -419,6 +425,7 @@ export default function AdminPage() {
         setFormData({ name: '', category: 'whole', price: 0, unit: 'kg', image: '', description: '', in_stock: true })
         setOptionsList([]); setNewOption('')
         setWeightOptionsList([]); setUnavailableWeightsList([]); setNewWeightOption('')
+        setPriceVariantsList([]); setNewVariantName(''); setNewVariantPrice('')
     }
     const startEdit = (product: Product) => {
         setEditingProduct(product)
@@ -426,10 +433,21 @@ export default function AdminPage() {
         setOptionsList(product.options || [])
         setWeightOptionsList(product.weight_options || [])
         setUnavailableWeightsList(product.unavailable_weights || [])
+        setPriceVariantsList(product.price_variants || [])
         setShowForm(true)
     }
     const addOption = () => { if (newOption.trim()) { setOptionsList([...optionsList, newOption.trim()]); setNewOption('') } }
     const removeOption = (index: number) => { setOptionsList(optionsList.filter((_, i) => i !== index)) }
+
+    const addPriceVariant = () => {
+        const p = parseFloat(newVariantPrice)
+        if (newVariantName.trim() && !isNaN(p) && p > 0) {
+            setPriceVariantsList([...priceVariantsList, { name: newVariantName.trim(), price: p }])
+            setNewVariantName('')
+            setNewVariantPrice('')
+        }
+    }
+    const removePriceVariant = (index: number) => { setPriceVariantsList(priceVariantsList.filter((_, i) => i !== index)) }
 
     const addWeightOption = () => {
         const val = parseFloat(newWeightOption)
@@ -763,6 +781,81 @@ export default function AdminPage() {
                                     </div>
                                     <div className="md:col-span-2"><label className="block text-sm font-bold mb-1">Image URL</label><input className="w-full p-2 border rounded-lg" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} /></div>
 
+                                    {/* Variants/Options Management */}
+                                    <div className="md:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200 mt-2">
+                                        <label className="block text-sm font-bold mb-2">Variants / Preparation Options</label>
+                                        <div className="flex gap-2 mb-3">
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Australian Mutton, Local Mutton, Cut 12"
+                                                className="flex-1 p-2 border rounded-lg"
+                                                value={newOption}
+                                                onChange={e => setNewOption(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        addOption();
+                                                    }
+                                                }}
+                                            />
+                                            <Button type="button" onClick={addOption} size="sm"><Plus className="h-4 w-4" /></Button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {optionsList.map((opt, index) => (
+                                                <div key={index} className="flex items-center gap-2 pl-3 pr-1 py-1 rounded-full border bg-white border-slate-200">
+                                                    <span className="text-sm font-bold text-slate-700">{opt}</span>
+                                                    <button type="button" onClick={() => removeOption(index)} className="p-1 text-red-400 hover:text-red-600 rounded-full hover:bg-red-50">
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 mt-2">* Add variations (e.g., Cut 12, Cut 16). These will appear as a dropdown choice for customers but do NOT change the product price.</p>
+                                    </div>
+
+                                    {/* Price Variants Management */}
+                                    <div className="md:col-span-2 bg-blue-50/50 p-4 rounded-xl border border-blue-100 mt-2">
+                                        <label className="block text-sm font-bold text-blue-900 mb-2">Price Variants (Different Prices)</label>
+                                        <div className="flex gap-2 mb-3">
+                                            <input
+                                                type="text"
+                                                placeholder="Variant Name (e.g. Australian Mutton)"
+                                                className="flex-[2] p-2 border rounded-lg"
+                                                value={newVariantName}
+                                                onChange={e => setNewVariantName(e.target.value)}
+                                            />
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                placeholder="Price (RM)"
+                                                className="flex-1 p-2 border rounded-lg"
+                                                value={newVariantPrice}
+                                                onChange={e => setNewVariantPrice(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        addPriceVariant();
+                                                    }
+                                                }}
+                                            />
+                                            <Button type="button" onClick={addPriceVariant} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white"><Plus className="h-4 w-4" /></Button>
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                            {priceVariantsList.map((variant, index) => (
+                                                <div key={index} className="flex items-center justify-between p-2 rounded-lg border bg-white border-blue-200">
+                                                    <span className="text-sm font-bold text-slate-700">{variant.name}</span>
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-sm font-black text-blue-700">RM {variant.price.toFixed(2)}</span>
+                                                        <button type="button" onClick={() => removePriceVariant(index)} className="p-1 text-red-400 hover:text-red-600 rounded-full hover:bg-red-50">
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-[10px] text-blue-600/80 mt-2">* Use this if variations have DIFFERENT prices. If added, the base price above will be ignored by customers choosing a variant.</p>
+                                    </div>
+
                                     {/* Size/Weight Management */}
                                     <div className="md:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
                                         <label className="block text-sm font-bold mb-2">Size Options (kg)</label>
@@ -966,7 +1059,8 @@ export default function AdminPage() {
                                             {([
                                                 { val: 'both', label: 'Both' },
                                                 { val: 'skinned', label: 'Skinned Only' },
-                                                { val: 'skinless', label: 'Skinless Only' }
+                                                { val: 'skinless', label: 'Skinless Only' },
+                                                { val: 'hidden', label: 'Hidden' }
                                             ] as const).map(opt => (
                                                 <button
                                                     key={opt.val}
@@ -994,11 +1088,12 @@ export default function AdminPage() {
                                         <div>
                                             <div className="font-bold flex items-center gap-2">
                                                 {shop.name}
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${shop.skin_choice_preference === 'skinned' ? 'bg-orange-100 text-orange-700' :
-                                                    shop.skin_choice_preference === 'skinless' ? 'bg-pink-100 text-pink-700' :
-                                                        'bg-blue-50 text-blue-700'
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${shop.skin_choice_preference === 'hidden' ? 'bg-slate-100 text-slate-500' :
+                                                    shop.skin_choice_preference === 'skinned' ? 'bg-orange-100 text-orange-700' :
+                                                        shop.skin_choice_preference === 'skinless' ? 'bg-pink-100 text-pink-700' :
+                                                            'bg-blue-50 text-blue-700'
                                                     }`}>
-                                                    {shop.skin_choice_preference === 'skinned' ? 'Skin' : shop.skin_choice_preference === 'skinless' ? 'No Skin' : 'Both'}
+                                                    {shop.skin_choice_preference === 'hidden' ? 'Hidden' : shop.skin_choice_preference === 'skinned' ? 'Skin' : shop.skin_choice_preference === 'skinless' ? 'No Skin' : 'Both'}
                                                 </span>
                                             </div>
                                             <div className="mt-1">
