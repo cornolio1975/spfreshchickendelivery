@@ -146,8 +146,8 @@ export function ProductCard({ product, skinPreference }: ProductCardProps) {
                     )
                 }
 
-                {/* Skin Option Selector - Only for non-egg/frozen items AND if preference allows choice AND is not hidden */}
-                {product.category !== 'eggs' && product.category !== 'frozen' && skinPreference !== 'hidden' && (skinPreference === 'both' || !skinPreference) && (
+                {/* Skin Option Selector - Only for non-egg/frozen/mutton items AND if preference allows choice AND is not hidden */}
+                {product.category !== 'eggs' && product.category !== 'frozen' && product.category !== 'mutton' && skinPreference !== 'hidden' && (skinPreference === 'both' || !skinPreference) && (
                     <div className="mb-3">
                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
                             Skin Preference
