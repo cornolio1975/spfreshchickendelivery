@@ -94,7 +94,7 @@ export function ProductCard({ product, skinPreference }: ProductCardProps) {
                 <div className="relative h-full w-full bg-white rounded-xl overflow-hidden border-4 border-white shadow-[0_4px_20px_rgb(0,0,0,0.03)]">
                     {/* The Product Image */}
                     <Image
-                        src={product.name.toLowerCase().includes('australian lamb') ? '/australian-lamb.jpg' : (product.image || "/fresh-chicken.jpg")}
+                        src={product.image || "/fresh-chicken.jpg"}
                         alt={product.name}
                         fill
                         className="object-contain p-4 group-hover:scale-110 transition-transform duration-500"
