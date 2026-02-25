@@ -225,7 +225,7 @@ export default function Home() {
                   <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 text-primary flex items-center justify-center font-bold text-lg">1</div>
                   <div className="ml-4">
                     <h4 className="font-bold text-slate-900">Choose Your Products</h4>
-                    <p className="text-sm text-slate-500">Select from our range of fresh chicken, parts, and eggs.</p>
+                    <p className="text-sm text-slate-500">Select from our range of fresh chicken, mutton, parts, and eggs.</p>
                   </div>
                 </div>
                 <div className="flex">
