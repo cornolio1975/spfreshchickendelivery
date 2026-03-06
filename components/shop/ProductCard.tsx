@@ -51,7 +51,7 @@ export function ProductCard({ product, skinPreference }: ProductCardProps) {
         let finalOption = ""
 
         // Add skin option if applicable (chicken products)
-        if (product.category !== 'eggs' && product.category !== 'frozen') {
+        if (product.category !== 'eggs' && product.category !== 'frozen' && product.category !== 'mutton') {
             finalOption += `${skinOption}`
         }
 
