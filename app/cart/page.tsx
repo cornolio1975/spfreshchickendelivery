@@ -425,9 +425,30 @@ function CartContent() {
             const orderNo = orderData.order_no
             const orderId = orderData.id
 
-            // 3. Construct WhatsApp Message
             const shop = shops.find(s => s.id === selectedShopId)
             const shopName = shop ? shop.name : "Default Shop"
+
+            // Send email notification to shop email
+            try {
+                const emailRes = await fetch('/api/email/notification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        order: orderData,
+                        shopName
+                    })
+                });
+                if (!emailRes.ok) {
+                    const emailErrData = await emailRes.json().catch(() => ({}));
+                    console.error('[Checkout] Email notification API failed:', emailErrData);
+                } else {
+                    console.log('[Checkout] Email notification sent successfully');
+                }
+            } catch (emailErr) {
+                console.error('[Checkout] Failed to send email notification:', emailErr);
+            }
+
+            // 3. Construct WhatsApp Message
 
             let message = `*New Order #${orderNo}*\n`
             if (deliveryType === 'scheduled') {
