@@ -428,24 +428,51 @@ function CartContent() {
             const shop = shops.find(s => s.id === selectedShopId)
             const shopName = shop ? shop.name : "Default Shop"
 
-            // Send email notification to shop email
+            // Send email notification to shop email via Web3Forms (browser-side)
             try {
-                const emailRes = await fetch('/api/email/notification', {
+                const deliveryFeeFormatted = (orderData.delivery_fee || 0).toFixed(2)
+                const subtotalFormatted = (total).toFixed(2)
+                const totalFormatted = finalTotal.toFixed(2)
+
+                let itemsText = ''
+                items.forEach((item, i) => {
+                    const opt = item.option ? ` (${item.option})` : ''
+                    itemsText += `${i + 1}. ${item.name}${opt} — ${item.quantity} x RM${item.price.toFixed(2)} = RM${(item.quantity * item.price).toFixed(2)}\n`
+                })
+
+                let scheduledText = 'Immediate (Order Now)'
+                if (deliveryType === 'scheduled') {
+                    scheduledText = `Scheduled: ${scheduledDate} @ ${scheduledTime}`
+                }
+
+                const formData = new FormData()
+                formData.append('access_key', 'c5a10abe-f44d-4303-90cb-6a41b3480836')
+                formData.append('subject', `🛒 New Order #${orderNo} — SP Fresh Chicken Delivery`)
+                formData.append('from_name', 'SP Fresh Chicken Delivery')
+                formData.append('Order Number', `#${orderNo}`)
+                formData.append('Shop', shopName)
+                formData.append('Customer Name', recipientName || 'N/A')
+                formData.append('Customer Phone', recipientPhone || 'N/A')
+                formData.append('Delivery Address', address || 'N/A')
+                formData.append('Unit / Floor / Remarks', roomFloorInfo || remarks || 'N/A')
+                formData.append('Delivery Type', scheduledText)
+                formData.append('Subtotal', `RM ${subtotalFormatted}`)
+                formData.append('Delivery Fee', `RM ${deliveryFeeFormatted}`)
+                formData.append('Total Amount', `RM ${totalFormatted}`)
+                formData.append('message', `Order Items:\n${itemsText}`)
+
+                const emailRes = await fetch('https://api.web3forms.com/submit', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        order: orderData,
-                        shopName
-                    })
-                });
-                if (!emailRes.ok) {
-                    const emailErrData = await emailRes.json().catch(() => ({}));
-                    console.error('[Checkout] Email notification API failed:', emailErrData);
+                    body: formData
+                })
+                const emailData = await emailRes.json()
+                if (emailRes.ok) {
+                    console.log('[Checkout] Email notification sent:', emailData.message)
                 } else {
-                    console.log('[Checkout] Email notification sent successfully');
+                    console.error('[Checkout] Web3Forms error:', emailData)
                 }
             } catch (emailErr) {
-                console.error('[Checkout] Failed to send email notification:', emailErr);
+                console.error('[Checkout] Failed to send email notification:', emailErr)
             }
 
             // 3. Construct WhatsApp Message
